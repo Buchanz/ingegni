@@ -8,9 +8,14 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb")
 require("dotenv").config()
 
 const app = express()
+
+if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1)
+}
 const port = process.env.PORT || 3000
 const uri = process.env.MONGO_URI
 const sessionSecret = process.env.SESSION_SECRET || "class-app-dev-secret"
+const isProduction = process.env.NODE_ENV === "production"
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -110,6 +115,7 @@ app.use((req, res, next) => {
     const allowedOrigins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://buchanz.github.io",
         "null"
     ]
     const origin = req.headers.origin
@@ -134,8 +140,8 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        sameSite: "lax",
-        secure: false
+        sameSite: isProduction ? "none" : "lax",
+        secure: isProduction
     }
 }))
 app.use(passport.initialize())
