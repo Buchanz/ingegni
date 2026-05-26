@@ -9,7 +9,11 @@ const sessionStatus = document.getElementById("session-status")
 const logoutButton = document.getElementById("logout-button")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
-const baseURL = window.location.protocol === "file:" ? "http://localhost:3000" : ""
+const baseURL = window.location.hostname.includes("github.io")
+    ? "https://ingegni.onrender.com"
+    : window.location.protocol === "file:"
+        ? "http://localhost:3000"
+        : ""
 
 let authMode = "login"
 let currentUser = null
