@@ -5,6 +5,7 @@ const session = require("express-session")
 const passport = require("passport")
 const LocalStrategy = require("passport-local").Strategy
 const GoogleStrategy = require("passport-google-oauth20").Strategy
+const MicrosoftStrategy = require("passport-microsoft").Strategy
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb")
 require("dotenv").config()
 
@@ -25,6 +26,9 @@ const verificationTokenTTL = 1000 * 60 * 60 * 24
 const googleClientID = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
 const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || apiPublicURL + "/auth/google/callback"
+const microsoftClientID = process.env.MICROSOFT_CLIENT_ID
+const microsoftClientSecret = process.env.MICROSOFT_CLIENT_SECRET
+const microsoftCallbackURL = process.env.MICROSOFT_CALLBACK_URL || apiPublicURL + "/auth/microsoft/callback"
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -127,6 +131,66 @@ async function connectDB() {
     console.log("Connected to MongoDB")
 }
 
+async function findOrCreateOAuthUser({ provider, providerId, email, displayName }) {
+    const providerIdField = provider + "Id"
+    const existingUser = await db.collection("users").findOne({
+        $or: [
+            { [providerIdField]: providerId },
+            { email }
+        ]
+    })
+
+    if (existingUser) {
+        await db.collection("users").updateOne(
+            { _id: existingUser._id },
+            {
+                $set: {
+                    [providerIdField]: providerId,
+                    email,
+                    emailVerified: true,
+                    authProvider: existingUser.authProvider || provider
+                },
+                $unset: { verificationTokenHash: "", verificationExpiresAt: "" }
+            }
+        )
+
+        return {
+            ...existingUser,
+            [providerIdField]: providerId,
+            email,
+            emailVerified: true
+        }
+    }
+
+    const baseUsername = (displayName || email.split("@")[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, "")
+        .slice(0, 24) || provider + "user"
+    let username = baseUsername
+    let suffix = 1
+
+    while (await db.collection("users").findOne({ username })) {
+        username = baseUsername + suffix
+        suffix += 1
+    }
+
+    const insertResult = await db.collection("users").insertOne({
+        username,
+        email,
+        emailVerified: true,
+        [providerIdField]: providerId,
+        authProvider: provider,
+        createdAt: Date.now()
+    })
+
+    return {
+        _id: insertResult.insertedId,
+        username,
+        email,
+        emailVerified: true
+    }
+}
+
 if (googleClientID && googleClientSecret) {
     passport.use(new GoogleStrategy({
         clientID: googleClientID,
@@ -140,62 +204,43 @@ if (googleClientID && googleClientSecret) {
                 return done(null, false, { message: "Google account did not provide an email address." })
             }
 
-            const existingUser = await db.collection("users").findOne({
-                $or: [
-                    { googleId: profile.id },
-                    { email }
-                ]
+            const user = await findOrCreateOAuthUser({
+                provider: "google",
+                providerId: profile.id,
+                email,
+                displayName: profile.displayName
             })
 
-            if (existingUser) {
-                await db.collection("users").updateOne(
-                    { _id: existingUser._id },
-                    {
-                        $set: {
-                            googleId: profile.id,
-                            email,
-                            emailVerified: true,
-                            authProvider: existingUser.authProvider || "google"
-                        },
-                        $unset: { verificationTokenHash: "", verificationExpiresAt: "" }
-                    }
-                )
+            done(null, user)
+        } catch (error) {
+            done(error)
+        }
+    }))
+}
 
-                return done(null, {
-                    ...existingUser,
-                    googleId: profile.id,
-                    email,
-                    emailVerified: true
-                })
+if (microsoftClientID && microsoftClientSecret) {
+    passport.use(new MicrosoftStrategy({
+        clientID: microsoftClientID,
+        clientSecret: microsoftClientSecret,
+        callbackURL: microsoftCallbackURL,
+        scope: ["user.read"],
+        includeUPN: true
+    }, async (accessToken, refreshToken, profile, done) => {
+        try {
+            const email = (profile.emails?.[0]?.value || profile._json?.mail || profile._json?.userPrincipalName || "").toLowerCase()
+
+            if (!email) {
+                return done(null, false, { message: "Microsoft account did not provide an email address." })
             }
 
-            const baseUsername = (profile.displayName || email.split("@")[0])
-                .toLowerCase()
-                .replace(/[^a-z0-9_-]/g, "")
-                .slice(0, 24) || "googleuser"
-            let username = baseUsername
-            let suffix = 1
-
-            while (await db.collection("users").findOne({ username })) {
-                username = baseUsername + suffix
-                suffix += 1
-            }
-
-            const insertResult = await db.collection("users").insertOne({
-                username,
+            const user = await findOrCreateOAuthUser({
+                provider: "microsoft",
+                providerId: profile.id,
                 email,
-                emailVerified: true,
-                googleId: profile.id,
-                authProvider: "google",
-                createdAt: Date.now()
+                displayName: profile.displayName
             })
 
-            done(null, {
-                _id: insertResult.insertedId,
-                username,
-                email,
-                emailVerified: true
-            })
+            done(null, user)
         } catch (error) {
             done(error)
         }
@@ -478,6 +523,34 @@ app.get("/auth/google/callback", (req, res, next) => {
             }
 
             res.redirect(frontendURL + "?login=google")
+        })
+    })(req, res, next)
+})
+
+app.get("/auth/microsoft", (req, res, next) => {
+    if (!microsoftClientID || !microsoftClientSecret) {
+        return res.status(503).send("Microsoft OAuth is not configured yet.")
+    }
+
+    passport.authenticate("microsoft")(req, res, next)
+})
+
+app.get("/auth/microsoft/callback", (req, res, next) => {
+    passport.authenticate("microsoft", { failureRedirect: frontendURL + "?login=failed" }, (error, user) => {
+        if (error) {
+            return next(error)
+        }
+
+        if (!user) {
+            return res.redirect(frontendURL + "?login=failed")
+        }
+
+        req.login(user, (loginError) => {
+            if (loginError) {
+                return next(loginError)
+            }
+
+            res.redirect(frontendURL + "?login=microsoft")
         })
     })(req, res, next)
 })

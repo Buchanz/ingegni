@@ -13,6 +13,7 @@ const authEmail = document.getElementById("auth-email")
 const authEmailLabel = document.getElementById("auth-email-label")
 const resendVerification = document.getElementById("resend-verification")
 const googleLogin = document.getElementById("google-login")
+const microsoftLogin = document.getElementById("microsoft-login")
 const baseURL = window.location.hostname.includes("github.io")
     ? "https://ingegni.onrender.com"
     : window.location.protocol === "file:"
@@ -57,6 +58,7 @@ const setAuthMode = (mode) => {
     authEmail.required = !isLogin
     resendVerification.hidden = !isLogin
     googleLogin.hidden = !isLogin
+    microsoftLogin.hidden = !isLogin
     authForm.elements.username.placeholder = isLogin ? "Email address" : "Username"
     authForm.elements.password.autocomplete = isLogin ? "current-password" : "new-password"
     authMessage.innerText = ""
@@ -193,6 +195,10 @@ googleLogin.addEventListener("click", () => {
     window.location.href = baseURL + "/auth/google"
 })
 
+microsoftLogin.addEventListener("click", () => {
+    window.location.href = baseURL + "/auth/microsoft"
+})
+
 resendVerification.addEventListener("click", async () => {
     authMessage.innerText = ""
 
@@ -246,6 +252,10 @@ if (queryParams.get("verified") === "1") {
 
 if (queryParams.get("login") === "google") {
     authMessage.innerText = "Signed in with Google."
+}
+
+if (queryParams.get("login") === "microsoft") {
+    authMessage.innerText = "Signed in with Microsoft."
 }
 
 if (queryParams.get("login") === "failed") {
