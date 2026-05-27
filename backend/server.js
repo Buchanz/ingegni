@@ -14,21 +14,25 @@ const app = express()
 if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1)
 }
+function envValue(name, fallback = "") {
+    return (process.env[name] || fallback).trim()
+}
+
 const port = process.env.PORT || 3000
-const uri = process.env.MONGO_URI
-const sessionSecret = process.env.SESSION_SECRET || "class-app-dev-secret"
+const uri = envValue("MONGO_URI")
+const sessionSecret = envValue("SESSION_SECRET", "class-app-dev-secret")
 const isProduction = process.env.NODE_ENV === "production"
-const frontendURL = process.env.FRONTEND_URL || (isProduction ? "https://buchanz.github.io/ingegni/" : "http://localhost:3000")
-const apiPublicURL = process.env.API_PUBLIC_URL || (isProduction ? "https://ingegni.onrender.com" : "http://localhost:3000")
-const resendAPIKey = process.env.RESEND_API_KEY
-const resendFromEmail = process.env.RESEND_FROM_EMAIL || "Ingegni <onboarding@resend.dev>"
+const frontendURL = envValue("FRONTEND_URL", isProduction ? "https://buchanz.github.io/ingegni/" : "http://localhost:3000")
+const apiPublicURL = envValue("API_PUBLIC_URL", isProduction ? "https://ingegni.onrender.com" : "http://localhost:3000")
+const resendAPIKey = envValue("RESEND_API_KEY")
+const resendFromEmail = envValue("RESEND_FROM_EMAIL", "Ingegni <onboarding@resend.dev>")
 const verificationTokenTTL = 1000 * 60 * 60 * 24
-const googleClientID = process.env.GOOGLE_CLIENT_ID
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
-const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || apiPublicURL + "/auth/google/callback"
-const microsoftClientID = process.env.MICROSOFT_CLIENT_ID
-const microsoftClientSecret = process.env.MICROSOFT_CLIENT_SECRET
-const microsoftCallbackURL = process.env.MICROSOFT_CALLBACK_URL || apiPublicURL + "/auth/microsoft/callback"
+const googleClientID = envValue("GOOGLE_CLIENT_ID")
+const googleClientSecret = envValue("GOOGLE_CLIENT_SECRET")
+const googleCallbackURL = envValue("GOOGLE_CALLBACK_URL", apiPublicURL + "/auth/google/callback")
+const microsoftClientID = envValue("MICROSOFT_CLIENT_ID")
+const microsoftClientSecret = envValue("MICROSOFT_CLIENT_SECRET")
+const microsoftCallbackURL = envValue("MICROSOFT_CALLBACK_URL", apiPublicURL + "/auth/microsoft/callback")
 
 const client = new MongoClient(uri, {
     serverApi: {
