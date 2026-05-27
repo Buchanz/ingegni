@@ -296,6 +296,10 @@ if (queryParams.get("login") === "failed") {
     authMessage.innerText = "Sign-in did not complete."
 }
 
+if (queryParams.get("login") === "microsoft_failed") {
+    authMessage.innerText = "Microsoft sign-in did not complete. Check the Render logs for the callback error."
+}
+
 getSession().then(getPosts).catch(error => {
     sessionStatus.innerText = "Could not reach the server."
     authMessage.innerText = error.message

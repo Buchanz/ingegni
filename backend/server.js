@@ -540,18 +540,21 @@ app.get("/auth/microsoft", (req, res, next) => {
 })
 
 app.get("/auth/microsoft/callback", (req, res, next) => {
-    passport.authenticate("microsoft", { failureRedirect: frontendURL + "?login=failed" }, (error, user) => {
+    passport.authenticate("microsoft", { failureRedirect: frontendURL + "?login=failed" }, (error, user, info) => {
         if (error) {
-            return next(error)
+            console.error("Microsoft OAuth callback failed:", error)
+            return res.redirect(frontendURL + "?login=microsoft_failed")
         }
 
         if (!user) {
-            return res.redirect(frontendURL + "?login=failed")
+            console.error("Microsoft OAuth did not return a user:", info)
+            return res.redirect(frontendURL + "?login=microsoft_failed")
         }
 
         req.login(user, (loginError) => {
             if (loginError) {
-                return next(loginError)
+                console.error("Microsoft OAuth session login failed:", loginError)
+                return res.redirect(frontendURL + "?login=microsoft_failed")
             }
 
             res.redirect(frontendURL + "?login=microsoft")
