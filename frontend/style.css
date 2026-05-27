@@ -156,6 +156,13 @@ button:focus {
   background: #1d573f;
 }
 
+.secondary-button {
+  width: fit-content;
+  min-width: 190px;
+  border-color: #5c6770;
+  color: #172026;
+}
+
 #logout-button {
   width: auto;
   min-width: 96px;

@@ -9,6 +9,10 @@ const sessionStatus = document.getElementById("session-status")
 const logoutButton = document.getElementById("logout-button")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
+const authEmail = document.getElementById("auth-email")
+const authEmailLabel = document.getElementById("auth-email-label")
+const resendVerification = document.getElementById("resend-verification")
+const googleLogin = document.getElementById("google-login")
 const baseURL = window.location.hostname.includes("github.io")
     ? "https://ingegni.onrender.com"
     : window.location.protocol === "file:"
@@ -48,6 +52,12 @@ const setAuthMode = (mode) => {
     showLogin.classList.toggle("active", isLogin)
     showSignup.classList.toggle("active", !isLogin)
     authSubmit.innerText = isLogin ? "Log in" : "Sign up"
+    authEmail.hidden = isLogin
+    authEmailLabel.hidden = isLogin
+    authEmail.required = !isLogin
+    resendVerification.hidden = !isLogin
+    googleLogin.hidden = !isLogin
+    authForm.elements.username.placeholder = isLogin ? "Email address" : "Username"
     authForm.elements.password.autocomplete = isLogin ? "current-password" : "new-password"
     authMessage.innerText = ""
 }
@@ -158,14 +168,43 @@ authForm.addEventListener("submit", async (event) => {
             method: "POST",
             body: JSON.stringify({
                 username: authForm.elements.username.value,
+                email: authForm.elements.email.value,
                 password: authForm.elements.password.value
             })
         })
+
+        if (authMode === "signup") {
+            authForm.reset()
+            setAuthMode("login")
+            authMessage.innerText = data.message || "Check your email to verify your account before logging in."
+            return
+        }
 
         currentUser = data.user
         authForm.reset()
         updateSessionUI()
         getPosts()
+    } catch (error) {
+        authMessage.innerText = error.message
+    }
+})
+
+googleLogin.addEventListener("click", () => {
+    window.location.href = baseURL + "/auth/google"
+})
+
+resendVerification.addEventListener("click", async () => {
+    authMessage.innerText = ""
+
+    try {
+        const data = await request("/api/resend-verification", {
+            method: "POST",
+            body: JSON.stringify({
+                email: authForm.elements.username.value
+            })
+        })
+
+        authMessage.innerText = data.message
     } catch (error) {
         authMessage.innerText = error.message
     }
@@ -198,6 +237,21 @@ form.addEventListener("submit", async (event) => {
 })
 
 setAuthMode("login")
+
+const queryParams = new URLSearchParams(window.location.search)
+
+if (queryParams.get("verified") === "1") {
+    authMessage.innerText = "Email verified. You can log in now."
+}
+
+if (queryParams.get("login") === "google") {
+    authMessage.innerText = "Signed in with Google."
+}
+
+if (queryParams.get("login") === "failed") {
+    authMessage.innerText = "Google sign-in did not complete."
+}
+
 getSession().then(getPosts).catch(error => {
     sessionStatus.innerText = "Could not reach the server."
     authMessage.innerText = error.message
