@@ -5,6 +5,7 @@ const postPanel = document.getElementById("post-panel")
 const authSubmit = document.getElementById("auth-submit")
 const authMessage = document.getElementById("auth-message")
 const postMessage = document.getElementById("post-message")
+const postCount = document.getElementById("post-count")
 const sessionStatus = document.getElementById("session-status")
 const logoutButton = document.getElementById("logout-button")
 const showLogin = document.getElementById("show-login")
@@ -59,7 +60,7 @@ const setAuthMode = (mode) => {
     resendVerification.hidden = !isLogin
     googleLogin.hidden = !isLogin
     microsoftLogin.hidden = !isLogin
-    authForm.elements.username.placeholder = isLogin ? "Email address" : "Username"
+    authForm.elements.username.placeholder = isLogin ? "name@example.com" : "Choose a handle"
     authForm.elements.password.autocomplete = isLogin ? "current-password" : "new-password"
     authMessage.innerText = ""
 }
@@ -91,6 +92,15 @@ const getPosts = async () => {
     return posts
 }
 
+const getInitials = (name = "?") => {
+    return name
+        .split(/[\s._-]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0].toUpperCase())
+        .join("") || "?"
+}
+
 const formatPostAge = (timecreated) => {
     const secondsSincePosted = Math.max(0, Math.round((Date.now() - timecreated) / 1000))
     let unitOfTime = "second"
@@ -117,43 +127,67 @@ const formatPostAge = (timecreated) => {
 const addPostsToPage = (posts) => {
     const allPosts = document.getElementById("all-posts")
     allPosts.innerHTML = ""
+    postCount.innerText = posts.length === 1 ? "1 note" : posts.length + " notes"
+
+    if (posts.length === 0) {
+        const emptyItem = document.createElement("li")
+        emptyItem.className = "empty-state"
+        emptyItem.innerHTML = "<strong>No notes yet.</strong><span>Your first saved idea will appear here.</span>"
+        allPosts.appendChild(emptyItem)
+        return
+    }
 
     posts.forEach(post => {
         const newListItem = document.createElement("li")
         newListItem.className = "post"
 
-        const postBody = document.createElement("p")
-        postBody.className = "post-body"
-        postBody.innerText = post.body
+        const avatar = document.createElement("div")
+        avatar.className = "post-avatar"
+        avatar.innerText = getInitials(post.author)
 
-        const postMeta = document.createElement("div")
-        postMeta.className = "post-meta"
+        const postContent = document.createElement("article")
+        postContent.className = "post-content"
+
+        const postHeader = document.createElement("div")
+        postHeader.className = "post-header"
+
+        const authorGroup = document.createElement("div")
 
         const usernameLabel = document.createElement("p")
+        usernameLabel.className = "post-author"
         usernameLabel.innerText = post.author
 
         const timeLabel = document.createElement("p")
+        timeLabel.className = "post-time"
         timeLabel.innerText = formatPostAge(post.timecreated)
 
-        postMeta.appendChild(usernameLabel)
-        postMeta.appendChild(timeLabel)
+        authorGroup.appendChild(usernameLabel)
+        authorGroup.appendChild(timeLabel)
+        postHeader.appendChild(authorGroup)
 
         if (currentUser && post.authorId === currentUser._id) {
             const deleteButton = document.createElement("button")
             deleteButton.className = "delete-button"
             deleteButton.type = "button"
-            deleteButton.innerText = "Delete"
+            deleteButton.innerText = "Remove"
 
             deleteButton.addEventListener("click", async () => {
                 await request(`/api/posts/${post._id}`, { method: "DELETE" })
                 getPosts()
             })
 
-            postMeta.appendChild(deleteButton)
+            postHeader.appendChild(deleteButton)
         }
 
-        newListItem.appendChild(postBody)
-        newListItem.appendChild(postMeta)
+        const postBody = document.createElement("p")
+        postBody.className = "post-body"
+        postBody.innerText = post.body
+
+        postContent.appendChild(postHeader)
+        postContent.appendChild(postBody)
+
+        newListItem.appendChild(avatar)
+        newListItem.appendChild(postContent)
         allPosts.appendChild(newListItem)
     })
 }
@@ -259,7 +293,7 @@ if (queryParams.get("login") === "microsoft") {
 }
 
 if (queryParams.get("login") === "failed") {
-    authMessage.innerText = "Google sign-in did not complete."
+    authMessage.innerText = "Sign-in did not complete."
 }
 
 getSession().then(getPosts).catch(error => {

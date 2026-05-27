@@ -3,58 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class App</title>
+    <title>Ingegni</title>
     <script defer src="script.js"></script>
     <link rel="stylesheet" href="style.css">
-    <link rel="shortcut icon" href="megaphone.png" type="image/png">
 </head>
 <body>
-    <header class="app-header">
-        <h1 class="app-title">
-            <img src="megaphone.png" alt="" class="app-title-icon">
-            <span>Class App</span>
-        </h1>
-        <div id="session-panel" class="session-panel">
-            <p id="session-status">Checking session...</p>
-            <button id="logout-button" type="button" hidden>Log out</button>
-        </div>
-    </header>
-
-    <main>
-        <section id="auth-card" class="auth-card">
-            <div class="auth-tabs" role="tablist" aria-label="Account forms">
-                <button id="show-login" class="tab-button active" type="button">Log in</button>
-                <button id="show-signup" class="tab-button" type="button">Sign up</button>
+    <div class="app-shell">
+        <header class="app-header">
+            <a class="brand" href="./" aria-label="Ingegni home">
+                <span class="brand-mark" aria-hidden="true">I</span>
+                <span>
+                    <span class="brand-name">Ingegni</span>
+                    <span class="brand-subtitle">Project baseline</span>
+                </span>
+            </a>
+            <div id="session-panel" class="session-panel">
+                <p id="session-status">Checking session...</p>
+                <button id="logout-button" class="ghost-button" type="button" hidden>Log out</button>
             </div>
+        </header>
 
-            <form id="auth-form">
-                <label for="auth-username">Username</label>
-                <input type="text" name="username" id="auth-username" autocomplete="username" required>
+        <main class="workspace">
+            <section id="auth-card" class="auth-card" aria-labelledby="auth-title">
+                <div class="panel-heading">
+                    <p class="eyebrow">Account</p>
+                    <h1 id="auth-title">Build from a real login system.</h1>
+                    <p class="support-copy">Use email verification or OAuth to enter the app workspace.</p>
+                </div>
 
-                <label id="auth-email-label" for="auth-email" hidden>Email</label>
-                <input type="email" name="email" id="auth-email" autocomplete="email" hidden>
+                <div class="auth-tabs" role="tablist" aria-label="Account forms">
+                    <button id="show-login" class="tab-button active" type="button">Log in</button>
+                    <button id="show-signup" class="tab-button" type="button">Sign up</button>
+                </div>
 
-                <label for="auth-password">Password</label>
-                <input type="password" name="password" id="auth-password" autocomplete="current-password" required minlength="6">
+                <form id="auth-form" class="stacked-form">
+                    <label for="auth-username">Username or email</label>
+                    <input type="text" name="username" id="auth-username" autocomplete="username" required>
 
-                <button id="auth-submit" type="submit">Log in</button>
-                <button id="google-login" class="secondary-button" type="button">Continue with Google</button>
-                <button id="microsoft-login" class="secondary-button" type="button">Continue with Microsoft</button>
-                <button id="resend-verification" class="secondary-button" type="button">Resend verification email</button>
-                <p id="auth-message" class="form-message" aria-live="polite"></p>
-            </form>
-        </section>
+                    <label id="auth-email-label" for="auth-email" hidden>Email</label>
+                    <input type="email" name="email" id="auth-email" autocomplete="email" hidden>
 
-        <section id="post-panel" class="post-panel" hidden>
-            <form id="new-post-form">
-                <label for="post-body">Post body</label>
-                <textarea name="body" id="post-body" rows="5" required></textarea>
-                <button type="submit">Post</button>
-                <p id="post-message" class="form-message" aria-live="polite"></p>
-            </form>
-        </section>
+                    <label for="auth-password">Password</label>
+                    <input type="password" name="password" id="auth-password" autocomplete="current-password" required minlength="6">
 
-        <ul id="all-posts"></ul>
-    </main>
+                    <button id="auth-submit" class="primary-button" type="submit">Log in</button>
+                    <p id="auth-message" class="form-message" aria-live="polite"></p>
+                </form>
+
+                <div class="provider-actions" aria-label="OAuth sign in options">
+                    <button id="google-login" class="provider-button" type="button">
+                        <span class="provider-icon" aria-hidden="true">G</span>
+                        Continue with Google
+                    </button>
+                    <button id="microsoft-login" class="provider-button" type="button">
+                        <span class="provider-icon microsoft" aria-hidden="true">M</span>
+                        Continue with Microsoft
+                    </button>
+                    <button id="resend-verification" class="text-button" type="button">Resend verification email</button>
+                </div>
+            </section>
+
+            <section class="app-column" aria-label="Ingegni board">
+                <section id="post-panel" class="composer-panel" hidden>
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Workspace</p>
+                            <h2>Idea board</h2>
+                        </div>
+                    </div>
+
+                    <form id="new-post-form" class="composer-form">
+                        <label for="post-body">New note</label>
+                        <textarea name="body" id="post-body" rows="5" maxlength="700" placeholder="Capture an idea, task, question, or feature you want to shape next." required></textarea>
+                        <div class="composer-footer">
+                            <p id="post-message" class="form-message" aria-live="polite"></p>
+                            <button class="primary-button" type="submit">Publish note</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="feed-panel" aria-labelledby="feed-title">
+                    <div class="section-heading feed-heading">
+                        <div>
+                            <p class="eyebrow">Live data</p>
+                            <h2 id="feed-title">Latest notes</h2>
+                        </div>
+                        <p id="post-count" class="count-pill">0 notes</p>
+                    </div>
+                    <ul id="all-posts" class="post-list"></ul>
+                </section>
+            </section>
+        </main>
+    </div>
 </body>
 </html>
