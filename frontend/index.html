@@ -63,8 +63,32 @@
                 </div>
             </section>
 
-            <section class="app-column" aria-label="Ingegni board">
-                <section id="post-panel" class="composer-panel" hidden>
+            <section id="home-screen" class="home-screen" aria-labelledby="home-title" hidden>
+                <div class="home-hero">
+                    <div>
+                        <p class="eyebrow">Home</p>
+                        <h1 id="home-title">Welcome back, <span id="home-username">creator</span>.</h1>
+                        <p class="support-copy">You are inside the Ingegni workspace. Capture ideas, test account features, and keep building from this baseline.</p>
+                    </div>
+                    <div class="home-badge" aria-hidden="true">Live</div>
+                </div>
+
+                <div class="dashboard-grid" aria-label="Workspace overview">
+                    <article class="dashboard-card">
+                        <span class="card-label">Account</span>
+                        <strong id="home-account-status">Signed in</strong>
+                    </article>
+                    <article class="dashboard-card">
+                        <span class="card-label">Database</span>
+                        <strong>MongoDB Atlas</strong>
+                    </article>
+                    <article class="dashboard-card">
+                        <span class="card-label">Backend</span>
+                        <strong>Render API</strong>
+                    </article>
+                </div>
+
+                <section id="post-panel" class="composer-panel">
                     <div class="section-heading">
                         <div>
                             <p class="eyebrow">Workspace</p>
@@ -81,7 +105,9 @@
                         </div>
                     </form>
                 </section>
+            </section>
 
+            <section class="app-column" aria-label="Ingegni board">
                 <section class="feed-panel" aria-labelledby="feed-title">
                     <div class="section-heading feed-heading">
                         <div>

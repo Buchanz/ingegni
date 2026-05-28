@@ -2,6 +2,9 @@ const form = document.getElementById("new-post-form")
 const authForm = document.getElementById("auth-form")
 const authCard = document.getElementById("auth-card")
 const postPanel = document.getElementById("post-panel")
+const homeScreen = document.getElementById("home-screen")
+const homeUsername = document.getElementById("home-username")
+const homeAccountStatus = document.getElementById("home-account-status")
 const authSubmit = document.getElementById("auth-submit")
 const authMessage = document.getElementById("auth-message")
 const postMessage = document.getElementById("post-message")
@@ -75,17 +78,24 @@ const setAuthMode = (mode) => {
 }
 
 const updateSessionUI = () => {
+    document.body.classList.toggle("is-authenticated", Boolean(currentUser))
+
     if (currentUser) {
-        sessionStatus.innerText = `Logged in as ${currentUser.username}`
+        const displayName = currentUser.username || currentUser.email || "creator"
+        sessionStatus.innerText = `Logged in as ${displayName}`
+        homeUsername.innerText = displayName
+        homeAccountStatus.innerText = currentUser.emailVerified ? "Verified" : "Signed in"
         logoutButton.hidden = false
         authCard.hidden = true
+        homeScreen.hidden = false
         postPanel.hidden = false
         return
     }
 
-    sessionStatus.innerText = "Log in or create an account to post."
+    sessionStatus.innerText = "Log in or create an account to enter the app."
     logoutButton.hidden = true
     authCard.hidden = false
+    homeScreen.hidden = true
     postPanel.hidden = true
 }
 
@@ -300,6 +310,7 @@ const oauthToken = queryParams.get("token")
 if (oauthToken) {
     authToken = oauthToken
     localStorage.setItem(authTokenKey, oauthToken)
+    authMessage.innerText = "Finishing sign-in..."
     queryParams.delete("token")
     const cleanQuery = queryParams.toString()
     const cleanURL = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : "") + window.location.hash
