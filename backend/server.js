@@ -229,6 +229,8 @@ async function connectDB() {
     await db.collection("users").createIndex({ username: 1 }, { unique: true })
     await db.collection("users").createIndex({ email: 1 }, { unique: true, sparse: true })
     await db.collection("users").createIndex({ verificationTokenHash: 1 })
+    await db.collection("posts").createIndex({ timecreated: -1 })
+    await db.collection("notes").createIndex({ userId: 1, updatedAt: -1 })
     console.log("Connected to MongoDB")
 }
 
@@ -727,6 +729,102 @@ app.delete("/api/posts/:id", requireAuth, async (req, res, next) => {
 
         if (result.deletedCount === 0) {
             return res.status(404).json({ message: "Post not found." })
+        }
+
+        res.sendStatus(204)
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/api/notes", requireAuth, async (req, res, next) => {
+    try {
+        const notes = await db.collection("notes")
+            .find({ userId: req.user._id })
+            .sort({ updatedAt: -1 })
+            .toArray()
+
+        res.json(notes)
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.post("/api/notes", requireAuth, async (req, res, next) => {
+    try {
+        const title = req.body.title?.trim() || "Untitled note"
+        const body = req.body.body?.trim()
+
+        if (!body) {
+            return res.status(400).json({ message: "Note body is required." })
+        }
+
+        const newNote = {
+            title,
+            body,
+            userId: req.user._id,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        }
+
+        const insertResult = await db.collection("notes").insertOne(newNote)
+
+        res.status(201).json({
+            _id: insertResult.insertedId,
+            ...newNote
+        })
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.patch("/api/notes/:id", requireAuth, async (req, res, next) => {
+    try {
+        if (!ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: "Note not found." })
+        }
+
+        const updates = { updatedAt: Date.now() }
+        const title = req.body.title?.trim()
+        const body = req.body.body?.trim()
+
+        if (title) {
+            updates.title = title
+        }
+
+        if (body) {
+            updates.body = body
+        }
+
+        const result = await db.collection("notes").findOneAndUpdate(
+            { _id: new ObjectId(req.params.id), userId: req.user._id },
+            { $set: updates },
+            { returnDocument: "after" }
+        )
+
+        if (!result) {
+            return res.status(404).json({ message: "Note not found." })
+        }
+
+        res.json(result)
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.delete("/api/notes/:id", requireAuth, async (req, res, next) => {
+    try {
+        if (!ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: "Note not found." })
+        }
+
+        const result = await db.collection("notes").deleteOne({
+            _id: new ObjectId(req.params.id),
+            userId: req.user._id
+        })
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: "Note not found." })
         }
 
         res.sendStatus(204)
