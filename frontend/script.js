@@ -21,16 +21,25 @@ const baseURL = window.location.hostname.includes("github.io")
         ? "http://localhost:3000"
         : ""
 
+const authTokenKey = "ingegni_auth_token"
+
 let authMode = "login"
 let currentUser = null
+let authToken = localStorage.getItem(authTokenKey) || ""
 
 const request = async (path, options = {}) => {
+    const headers = {
+        "Content-Type": "application/json",
+        ...options.headers
+    }
+
+    if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`
+    }
+
     const response = await fetch(`${baseURL}${path}`, {
         credentials: "include",
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers
-        },
+        headers,
         ...options
     })
 
@@ -216,6 +225,11 @@ authForm.addEventListener("submit", async (event) => {
             return
         }
 
+        authToken = data.token || ""
+        if (authToken) {
+            localStorage.setItem(authTokenKey, authToken)
+        }
+
         currentUser = data.user
         authForm.reset()
         updateSessionUI()
@@ -252,6 +266,8 @@ resendVerification.addEventListener("click", async () => {
 
 logoutButton.addEventListener("click", async () => {
     await request("/api/logout", { method: "POST" })
+    authToken = ""
+    localStorage.removeItem(authTokenKey)
     currentUser = null
     updateSessionUI()
     getPosts()
@@ -279,6 +295,16 @@ form.addEventListener("submit", async (event) => {
 setAuthMode("login")
 
 const queryParams = new URLSearchParams(window.location.search)
+const oauthToken = queryParams.get("token")
+
+if (oauthToken) {
+    authToken = oauthToken
+    localStorage.setItem(authTokenKey, oauthToken)
+    queryParams.delete("token")
+    const cleanQuery = queryParams.toString()
+    const cleanURL = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : "") + window.location.hash
+    window.history.replaceState({}, document.title, cleanURL)
+}
 
 if (queryParams.get("verified") === "1") {
     authMessage.innerText = "Email verified. You can log in now."
