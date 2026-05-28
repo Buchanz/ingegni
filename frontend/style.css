@@ -52,6 +52,222 @@ button:disabled {
   padding: 24px 0 48px;
 }
 
+.is-auth-page {
+  min-height: 100vh;
+  background: #000000;
+  color: #f7f9f9;
+}
+
+.is-auth-page .app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: min(1240px, calc(100% - 40px));
+  padding: 0;
+}
+
+.is-auth-page .app-header,
+.is-auth-page .side-column {
+  display: none;
+}
+
+.is-auth-page .workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(48px, 8vw, 120px);
+  margin: 0;
+  padding: 64px 0 44px;
+}
+
+.is-auth-page .auth-card {
+  position: static;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.is-auth-page .panel-heading {
+  margin-bottom: 26px;
+}
+
+.is-auth-page .auth-card h1 {
+  max-width: 9ch;
+  color: #f7f9f9;
+  font-size: clamp(3rem, 6vw, 4.4rem);
+  line-height: 1.02;
+}
+
+.is-auth-page .support-copy {
+  max-width: 34ch;
+  color: #8b98a5;
+}
+
+.is-auth-page .auth-tabs {
+  width: min(100%, 390px);
+  border-color: #2f3336;
+  background: transparent;
+}
+
+.is-auth-page .tab-button {
+  color: #8b98a5;
+}
+
+.is-auth-page .tab-button.active {
+  background: #eff3f4;
+  color: #0f1419;
+}
+
+.is-auth-page .stacked-form,
+.is-auth-page .provider-actions {
+  width: min(100%, 390px);
+}
+
+.is-auth-page label {
+  color: #e7e9ea;
+}
+
+.is-auth-page input {
+  border-color: #33363d;
+  background: #000000;
+  color: #f7f9f9;
+}
+
+.is-auth-page input::placeholder {
+  color: #71767b;
+}
+
+.is-auth-page .primary-button,
+.is-auth-page .provider-button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  justify-content: center;
+}
+
+.is-auth-page .primary-button {
+  background: #eff3f4;
+  border-color: #eff3f4;
+  color: #0f1419;
+}
+
+.is-auth-page .primary-button:hover,
+.is-auth-page .provider-button:hover {
+  background: #d7dbdc;
+  border-color: #d7dbdc;
+}
+
+.is-auth-page .provider-button {
+  background: #eff3f4;
+  border-color: #eff3f4;
+  color: #0f1419;
+}
+
+.is-auth-page .provider-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.google-logo {
+  color: #4285f4;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.apple-logo svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: #000000;
+}
+
+.microsoft-logo {
+  display: grid;
+  grid-template-columns: repeat(2, 9px);
+  grid-template-rows: repeat(2, 9px);
+  gap: 2px;
+}
+
+.microsoft-logo span:nth-child(1) {
+  background: #f25022;
+}
+
+.microsoft-logo span:nth-child(2) {
+  background: #7fba00;
+}
+
+.microsoft-logo span:nth-child(3) {
+  background: #00a4ef;
+}
+
+.microsoft-logo span:nth-child(4) {
+  background: #ffb900;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #71767b;
+  font-size: 0.9rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #2f3336;
+}
+
+.is-auth-page .text-button {
+  align-self: center;
+  color: #eff3f4;
+  text-align: center;
+}
+
+.is-auth-page .form-message {
+  color: #8b98a5;
+}
+
+.auth-visual {
+  display: none;
+}
+
+.is-auth-page .auth-visual {
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+}
+
+.auth-wordmark {
+  color: #f7f9f9;
+  font-size: clamp(4.5rem, 10vw, 9rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+.auth-page-footer {
+  display: none;
+}
+
+.is-auth-page .auth-page-footer {
+  display: block;
+  padding: 16px 0 22px;
+  color: #71767b;
+  font-size: 0.84rem;
+  text-align: center;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -568,8 +784,24 @@ button:focus-visible {
 
 @media (max-width: 920px) {
   .workspace,
-  .is-authenticated .workspace {
+  .is-authenticated .workspace,
+  .is-auth-page .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .is-auth-page .workspace {
+    gap: 28px;
+    padding-top: 42px;
+  }
+
+  .is-auth-page .auth-visual {
+    order: -1;
+    min-height: auto;
+    place-items: start;
+  }
+
+  .auth-wordmark {
+    font-size: clamp(3.4rem, 16vw, 6rem);
   }
 
   .auth-card {
@@ -585,6 +817,11 @@ button:focus-visible {
   .app-shell {
     width: min(100% - 20px, 1180px);
     padding-top: 12px;
+  }
+
+  .is-auth-page .app-shell {
+    width: min(100% - 28px, 1180px);
+    padding-top: 0;
   }
 
   .app-header,

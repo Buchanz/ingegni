@@ -21,6 +21,7 @@ const authEmailLabel = document.getElementById("auth-email-label")
 const resendVerification = document.getElementById("resend-verification")
 const googleLogin = document.getElementById("google-login")
 const microsoftLogin = document.getElementById("microsoft-login")
+const appleLogin = document.getElementById("apple-login")
 const refreshWeather = document.getElementById("refresh-weather")
 const weatherCard = document.getElementById("weather-card")
 const baseURL = window.location.hostname.includes("github.io")
@@ -76,7 +77,7 @@ const setAuthMode = (mode) => {
 
     showLogin.classList.toggle("active", isLogin)
     showSignup.classList.toggle("active", !isLogin)
-    authSubmit.innerText = isLogin ? "Log in" : "Sign up"
+    authSubmit.innerText = isLogin ? "Continue" : "Create account"
     authEmail.hidden = isLogin
     authEmailLabel.hidden = isLogin
     authEmail.required = !isLogin
@@ -90,6 +91,7 @@ const setAuthMode = (mode) => {
 
 const updateSessionUI = () => {
     document.body.classList.toggle("is-authenticated", Boolean(currentUser))
+    document.body.classList.toggle("is-auth-page", !currentUser)
 
     if (currentUser) {
         const displayName = currentUser.username || currentUser.email || "creator"
@@ -471,6 +473,10 @@ googleLogin.addEventListener("click", () => {
 
 microsoftLogin.addEventListener("click", () => {
     window.location.href = baseURL + "/auth/microsoft"
+})
+
+appleLogin.addEventListener("click", () => {
+    authMessage.innerText = "Apple sign-in is not connected yet. Use Google, Microsoft, or email for this version."
 })
 
 resendVerification.addEventListener("click", async () => {
