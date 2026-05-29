@@ -34,6 +34,7 @@ const googleCallbackURL = envValue("GOOGLE_CALLBACK_URL", apiPublicURL + "/auth/
 const microsoftClientID = envValue("MICROSOFT_CLIENT_ID")
 const microsoftClientSecret = envValue("MICROSOFT_CLIENT_SECRET")
 const microsoftCallbackURL = envValue("MICROSOFT_CALLBACK_URL", apiPublicURL + "/auth/microsoft/callback")
+const microsoftTenant = envValue("MICROSOFT_TENANT", "common")
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -381,8 +382,9 @@ if (microsoftClientID && microsoftClientSecret) {
         clientID: microsoftClientID,
         clientSecret: microsoftClientSecret,
         callbackURL: microsoftCallbackURL,
-        scope: ["user.read"],
-        includeUPN: true
+        tenant: microsoftTenant,
+        scope: ["user.read", "openid", "profile", "email"],
+        addUPNAsEmail: true
     }, async (accessToken, refreshToken, profile, done) => {
         try {
             const email = (profile.emails?.[0]?.value || profile._json?.mail || profile._json?.userPrincipalName || "").toLowerCase()
@@ -769,13 +771,17 @@ app.get("/auth/microsoft", (req, res, next) => {
         return res.status(503).send("Microsoft OAuth is not configured yet.")
     }
 
-    passport.authenticate("microsoft")(req, res, next)
+    passport.authenticate("microsoft", { prompt: "select_account", session: false })(req, res, next)
 })
 
 app.get("/auth/microsoft/callback", (req, res, next) => {
-    passport.authenticate("microsoft", { failureRedirect: buildFrontendRedirect({ login: "failed" }) }, (error, user, info) => {
+    passport.authenticate("microsoft", { session: false }, (error, user, info) => {
         if (error) {
-            console.error("Microsoft OAuth callback failed:", error)
+            console.error("Microsoft OAuth callback failed:", {
+                message: error.message,
+                oauthError: error.oauthError?.data || error.oauthError?.message,
+                stack: error.stack
+            })
             return res.redirect(buildFrontendRedirect({ login: "microsoft_failed" }))
         }
 
@@ -784,14 +790,7 @@ app.get("/auth/microsoft/callback", (req, res, next) => {
             return res.redirect(buildFrontendRedirect({ login: "microsoft_failed" }))
         }
 
-        req.login(user, (loginError) => {
-            if (loginError) {
-                console.error("Microsoft OAuth session login failed:", loginError)
-                return res.redirect(buildFrontendRedirect({ login: "microsoft_failed" }))
-            }
-
-            res.redirect(buildFrontendRedirect({ login: "microsoft", token: createAuthToken(user) }))
-        })
+        res.redirect(buildFrontendRedirect({ login: "microsoft", token: createAuthToken(user) }))
     })(req, res, next)
 })
 
