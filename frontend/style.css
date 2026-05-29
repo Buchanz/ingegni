@@ -176,40 +176,11 @@ button:disabled {
   box-shadow: none;
 }
 
-.google-logo {
-  color: #4285f4;
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.apple-logo svg {
-  display: block;
-  width: 20px;
-  height: 20px;
-  fill: #000000;
-}
-
-.microsoft-logo {
-  display: grid;
-  grid-template-columns: repeat(2, 9px);
-  grid-template-rows: repeat(2, 9px);
-  gap: 2px;
-}
-
-.microsoft-logo span:nth-child(1) {
-  background: #f25022;
-}
-
-.microsoft-logo span:nth-child(2) {
-  background: #7fba00;
-}
-
-.microsoft-logo span:nth-child(3) {
-  background: #00a4ef;
-}
-
-.microsoft-logo span:nth-child(4) {
-  background: #ffb900;
+.provider-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 22px;
 }
 
 .auth-divider {
