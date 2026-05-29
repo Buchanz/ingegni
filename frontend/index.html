@@ -28,10 +28,21 @@
 
             <div class="session-panel">
                 <p id="session-status">Checking session...</p>
-                <button id="profile-button" class="profile-button" type="button" aria-label="Open my profile" hidden>
+                <button id="profile-button" class="profile-button" type="button" aria-label="Open account settings" aria-expanded="false" hidden>
                     <span id="profile-initials">P</span>
                 </button>
-                <button id="logout-button" class="ghost-button" type="button" hidden>Log out</button>
+                <div id="account-menu" class="account-menu" hidden>
+                    <div class="account-menu-header">
+                        <span>Signed in as</span>
+                        <strong id="account-username">@proxima</strong>
+                    </div>
+                    <div class="settings-row">
+                        <span>App settings</span>
+                        <strong>Default</strong>
+                    </div>
+                    <button id="view-profile-button" class="menu-button" type="button">View profile</button>
+                    <button id="logout-button" class="menu-button danger" type="button">Log out</button>
+                </div>
             </div>
         </header>
 

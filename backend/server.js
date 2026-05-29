@@ -241,6 +241,14 @@ function buildFrontendRedirect(params) {
 function buildOAuthFailureRedirect(error, fallbackLogin = "failed") {
     const message = String(error?.message || "")
 
+    if (error?.status === 404 || /no account/i.test(message)) {
+        return buildFrontendRedirect({ login: "account_missing" })
+    }
+
+    if (error?.status === 428 || /needs a username/i.test(message)) {
+        return buildFrontendRedirect({ login: "username_required" })
+    }
+
     if (error?.status === 409 || /username.*taken/i.test(message)) {
         return buildFrontendRedirect({ login: "username_taken" })
     }
@@ -356,7 +364,7 @@ async function connectDB() {
     console.log("Connected to MongoDB")
 }
 
-async function findOrCreateOAuthUser({ provider, providerId, email, displayName, requestedUsername }) {
+async function findOrCreateOAuthUser({ provider, providerId, email, displayName, requestedUsername, authMode = "login" }) {
     const providerIdField = provider + "Id"
     const existingUser = await db.collection("users").findOne({
         $or: [
@@ -373,8 +381,15 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName,
             authProvider: existingUser.authProvider || provider,
             needsUsername: false
         }
+        const shouldAttachUsername = requestedUsername && (!existingUser.username || existingUser.needsUsername)
 
-        if (requestedUsername) {
+        if (!existingUser.username && !requestedUsername) {
+            const error = new Error("This provider account needs a username before it can log in.")
+            error.status = 428
+            throw error
+        }
+
+        if (shouldAttachUsername) {
             const usernameError = validateUsername(requestedUsername)
 
             if (usernameError) {
@@ -408,6 +423,12 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName,
             emailVerified: true,
             needsUsername: false
         }
+    }
+
+    if (authMode !== "signup") {
+        const error = new Error("No account is connected to that provider yet.")
+        error.status = 404
+        throw error
     }
 
     const username = normalizeUsername(requestedUsername)
@@ -465,7 +486,8 @@ if (googleClientID && googleClientSecret) {
                 providerId: profile.id,
                 email,
                 displayName: profile.displayName,
-                requestedUsername: verifyOAuthState(req.query.state).username
+                requestedUsername: verifyOAuthState(req.query.state).username,
+                authMode: verifyOAuthState(req.query.state).mode === "signup" ? "signup" : "login"
             })
 
             done(null, user)
@@ -497,7 +519,8 @@ if (microsoftClientID && microsoftClientSecret) {
                 providerId: profile.id,
                 email,
                 displayName: profile.displayName,
-                requestedUsername: verifyOAuthState(req.query.state).username
+                requestedUsername: verifyOAuthState(req.query.state).username,
+                authMode: verifyOAuthState(req.query.state).mode === "signup" ? "signup" : "login"
             })
 
             done(null, user)
@@ -524,6 +547,10 @@ passport.use(new LocalStrategy(async (username, password, done) => {
 
         if (user.email && !user.emailVerified) {
             return done(null, false, { message: "Please verify your email before logging in." })
+        }
+
+        if (!user.username) {
+            return done(null, false, { message: "This account needs a username before it can log in. Create the account first." })
         }
 
         const passwordIsValid = await verifyPassword(password, user)
@@ -844,10 +871,11 @@ app.get("/auth/google", async (req, res, next) => {
     }
 
     try {
-        const username = normalizeUsername(req.query.username)
-        const state = username ? createOAuthState({ username }) : undefined
+        const mode = req.query.mode === "signup" ? "signup" : "login"
+        const username = mode === "signup" ? normalizeUsername(req.query.username) : ""
+        const state = createOAuthState({ mode, username })
 
-        if (username) {
+        if (mode === "signup") {
             const usernameError = validateUsername(username)
 
             if (usernameError) {
@@ -891,10 +919,11 @@ app.get("/auth/microsoft", async (req, res, next) => {
     }
 
     try {
-        const username = normalizeUsername(req.query.username)
-        const state = username ? createOAuthState({ username }) : undefined
+        const mode = req.query.mode === "signup" ? "signup" : "login"
+        const username = mode === "signup" ? normalizeUsername(req.query.username) : ""
+        const state = createOAuthState({ mode, username })
 
-        if (username) {
+        if (mode === "signup") {
             const usernameError = validateUsername(username)
 
             if (usernameError) {

@@ -21,6 +21,9 @@ const sessionStatus = document.getElementById("session-status")
 const logoutButton = document.getElementById("logout-button")
 const profileButton = document.getElementById("profile-button")
 const profileInitials = document.getElementById("profile-initials")
+const accountMenu = document.getElementById("account-menu")
+const accountUsername = document.getElementById("account-username")
+const viewProfileButton = document.getElementById("view-profile-button")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
 const authUsernameLabel = document.getElementById("auth-username-label")
@@ -114,6 +117,11 @@ const closeSearchResults = () => {
     userSearchResults.hidden = true
 }
 
+const closeAccountMenu = () => {
+    accountMenu.hidden = true
+    profileButton.setAttribute("aria-expanded", "false")
+}
+
 const showHomeFeed = () => {
     const needsUsername = Boolean(currentUser?.needsUsername)
     activeProfileUsername = ""
@@ -133,7 +141,10 @@ const updateSessionUI = () => {
 
         sessionStatus.innerText = needsUsername ? "Choose a username" : "@" + displayName
         profileInitials.innerText = getInitials(displayName)
+        accountUsername.innerText = "@" + displayName
         profileButton.hidden = needsUsername
+        accountMenu.hidden = true
+        profileButton.setAttribute("aria-expanded", "false")
         logoutButton.hidden = false
         userSearchForm.hidden = needsUsername
         weatherInline.hidden = needsUsername
@@ -149,6 +160,8 @@ const updateSessionUI = () => {
 
     sessionStatus.innerText = "Log in to post and search users."
     profileButton.hidden = true
+    accountMenu.hidden = true
+    profileButton.setAttribute("aria-expanded", "false")
     logoutButton.hidden = true
     userSearchForm.hidden = true
     weatherInline.hidden = true
@@ -219,13 +232,13 @@ const startProviderAuth = (provider) => {
         return
     }
 
-    const params = new URLSearchParams()
+    const params = new URLSearchParams({ mode: authMode })
 
     if (username) {
         params.set("username", username)
     }
 
-    window.location.href = baseURL + "/auth/" + provider + (params.toString() ? "?" + params.toString() : "")
+    window.location.href = baseURL + "/auth/" + provider + "?" + params.toString()
 }
 
 const getInitials = (name = "?") => {
@@ -643,7 +656,11 @@ microsoftLogin.addEventListener("click", () => {
 })
 
 appleLogin.addEventListener("click", () => {
-    authMessage.innerText = "Apple sign-in is not connected yet. Use Google, Microsoft, or email for this version."
+    if (authMode === "signup" && !getSignupUsername()) {
+        return
+    }
+
+    authMessage.innerText = "Apple sign-in is not connected yet. Create an account with email, Google, or Microsoft for this version."
 })
 
 resendVerification.addEventListener("click", async () => {
@@ -672,7 +689,14 @@ logoutButton.addEventListener("click", async () => {
     getNotes()
 })
 
-profileButton.addEventListener("click", () => {
+profileButton.addEventListener("click", (event) => {
+    event.stopPropagation()
+    accountMenu.hidden = !accountMenu.hidden
+    profileButton.setAttribute("aria-expanded", String(!accountMenu.hidden))
+})
+
+viewProfileButton.addEventListener("click", () => {
+    closeAccountMenu()
     if (currentUser?.username) {
         loadUserProfile(currentUser.username)
     }
@@ -710,6 +734,10 @@ userSearchForm.addEventListener("submit", async (event) => {
 document.addEventListener("click", (event) => {
     if (!userSearchForm.contains(event.target)) {
         closeSearchResults()
+    }
+
+    if (!accountMenu.hidden && !accountMenu.contains(event.target) && !profileButton.contains(event.target)) {
+        closeAccountMenu()
     }
 })
 
@@ -757,6 +785,16 @@ if (queryParams.get("login") === "username_taken") {
 if (queryParams.get("login") === "username_invalid") {
     setAuthMode("signup")
     authMessage.innerText = "Choose a valid username before continuing."
+}
+
+if (queryParams.get("login") === "account_missing") {
+    setAuthMode("signup")
+    authMessage.innerText = "No account is connected to that provider yet. Create an account first and choose a username."
+}
+
+if (queryParams.get("login") === "username_required") {
+    setAuthMode("signup")
+    authMessage.innerText = "That provider account needs a username before it can log in. Create the account first."
 }
 
 getSession()
