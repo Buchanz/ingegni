@@ -74,6 +74,59 @@ function hashToken(token) {
     return crypto.createHash("sha256").update(token).digest("hex")
 }
 
+function normalizeUsername(username) {
+    return String(username || "").trim().toLowerCase()
+}
+
+function escapeRegex(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+
+function validateUsername(username) {
+    if (!username) {
+        return "Username is required."
+    }
+
+    if (!/^[a-z0-9_.]{3,24}$/.test(username)) {
+        return "Username must be 3-24 characters and can only use letters, numbers, underscores, or periods."
+    }
+
+    if (username.startsWith(".") || username.endsWith(".")) {
+        return "Username cannot start or end with a period."
+    }
+
+    return ""
+}
+
+async function usernameIsTaken(username, exceptUserId) {
+    const usernameLower = normalizeUsername(username)
+    const query = {
+        $or: [
+            { usernameLower },
+            { username: usernameLower },
+            { username },
+            { username: { $regex: "^" + escapeRegex(usernameLower) + "$", $options: "i" } }
+        ]
+    }
+
+    if (exceptUserId) {
+        query._id = { $ne: new ObjectId(exceptUserId) }
+    }
+
+    return Boolean(await db.collection("users").findOne(query))
+}
+
+async function createTemporaryUsername(provider) {
+    let username = provider + "_" + crypto.randomBytes(4).toString("hex")
+
+    while (await usernameIsTaken(username)) {
+        username = provider + "_" + crypto.randomBytes(4).toString("hex")
+    }
+
+    return username
+}
+
 function createVerificationToken() {
     const token = crypto.randomBytes(32).toString("hex")
 
@@ -165,7 +218,8 @@ async function getRequestUser(req) {
         _id: user._id,
         username: user.username,
         email: user.email,
-        emailVerified: Boolean(user.emailVerified)
+        emailVerified: Boolean(user.emailVerified),
+        needsUsername: Boolean(user.needsUsername)
     }
 }
 
@@ -228,6 +282,7 @@ async function connectDB() {
     db = client.db(process.env.MONGO_DB_NAME)
     await db.collection("users").createIndex({ username: 1 }, { unique: true })
     await db.collection("users").createIndex({ email: 1 }, { unique: true, sparse: true })
+    await db.collection("users").createIndex({ usernameLower: 1 }, { unique: true, sparse: true })
     await db.collection("users").createIndex({ verificationTokenHash: 1 })
     await db.collection("posts").createIndex({ timecreated: -1 })
     await db.collection("notes").createIndex({ userId: 1, updatedAt: -1 })
@@ -244,6 +299,10 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
     })
 
     if (existingUser) {
+        const needsUsername = existingUser.needsUsername === undefined && existingUser.authProvider !== "local"
+            ? true
+            : Boolean(existingUser.needsUsername)
+
         await db.collection("users").updateOne(
             { _id: existingUser._id },
             {
@@ -251,7 +310,8 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
                     [providerIdField]: providerId,
                     email,
                     emailVerified: true,
-                    authProvider: existingUser.authProvider || provider
+                    authProvider: existingUser.authProvider || provider,
+                    needsUsername
                 },
                 $unset: { verificationTokenHash: "", verificationExpiresAt: "" }
             }
@@ -261,26 +321,20 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
             ...existingUser,
             [providerIdField]: providerId,
             email,
-            emailVerified: true
+            emailVerified: true,
+            needsUsername
         }
     }
 
-    const baseUsername = (displayName || email.split("@")[0])
-        .toLowerCase()
-        .replace(/[^a-z0-9_-]/g, "")
-        .slice(0, 24) || provider + "user"
-    let username = baseUsername
-    let suffix = 1
-
-    while (await db.collection("users").findOne({ username })) {
-        username = baseUsername + suffix
-        suffix += 1
-    }
+    const username = await createTemporaryUsername(provider)
 
     const insertResult = await db.collection("users").insertOne({
         username,
+        usernameLower: normalizeUsername(username),
+        displayName: displayName || "",
         email,
         emailVerified: true,
+        needsUsername: true,
         [providerIdField]: providerId,
         authProvider: provider,
         createdAt: Date.now()
@@ -290,7 +344,8 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
         _id: insertResult.insertedId,
         username,
         email,
-        emailVerified: true
+        emailVerified: true,
+        needsUsername: true
     }
 }
 
@@ -355,7 +410,8 @@ passport.use(new LocalStrategy(async (username, password, done) => {
         const login = username.toLowerCase()
         const user = await db.collection("users").findOne({
             $or: [
-                { username },
+                { usernameLower: login },
+                { username: login },
                 { email: login }
             ]
         })
@@ -396,7 +452,8 @@ passport.deserializeUser(async (id, done) => {
             _id: user._id,
             username: user.username,
             email: user.email,
-            emailVerified: Boolean(user.emailVerified)
+            emailVerified: Boolean(user.emailVerified),
+            needsUsername: Boolean(user.needsUsername)
         })
     } catch (error) {
         done(error)
@@ -458,7 +515,8 @@ app.get("/api/me", async (req, res, next) => {
                 _id: user._id,
                 username: user.username,
                 email: user.email,
-                emailVerified: user.emailVerified
+                emailVerified: user.emailVerified,
+                needsUsername: user.needsUsername
             }
         })
     } catch (error) {
@@ -468,12 +526,22 @@ app.get("/api/me", async (req, res, next) => {
 
 app.post("/api/signup", async (req, res, next) => {
     try {
-        const username = req.body.username?.trim()
+        const username = normalizeUsername(req.body.username)
         const email = req.body.email?.trim().toLowerCase()
         const password = req.body.password
 
         if (!username || !email || !password) {
             return res.status(400).json({ message: "Username, email, and password are required." })
+        }
+
+        const usernameError = validateUsername(username)
+
+        if (usernameError) {
+            return res.status(400).json({ message: usernameError })
+        }
+
+        if (await usernameIsTaken(username)) {
+            return res.status(409).json({ message: "That username is already taken." })
         }
 
         if (!email.includes("@")) {
@@ -488,8 +556,10 @@ app.post("/api/signup", async (req, res, next) => {
         const verification = createVerificationToken()
         const insertResult = await db.collection("users").insertOne({
             username,
+            usernameLower: normalizeUsername(username),
             email,
             emailVerified: false,
+            needsUsername: false,
             verificationTokenHash: verification.tokenHash,
             verificationExpiresAt: verification.expiresAt,
             hashed_password: hashedPassword,
@@ -509,12 +579,61 @@ app.post("/api/signup", async (req, res, next) => {
                 _id: insertResult.insertedId,
                 username,
                 email,
-                emailVerified: false
+                emailVerified: false,
+                needsUsername: false
             }
         })
     } catch (error) {
         if (error.code === 11000) {
             return res.status(409).json({ message: "That username or email is already taken." })
+        }
+
+        next(error)
+    }
+})
+
+app.patch("/api/me/username", requireAuth, async (req, res, next) => {
+    try {
+        const username = normalizeUsername(req.body.username)
+        const usernameError = validateUsername(username)
+
+        if (usernameError) {
+            return res.status(400).json({ message: usernameError })
+        }
+
+        if (await usernameIsTaken(username, req.user._id)) {
+            return res.status(409).json({ message: "That username is already taken." })
+        }
+
+        const result = await db.collection("users").findOneAndUpdate(
+            { _id: new ObjectId(req.user._id) },
+            {
+                $set: {
+                    username,
+                    usernameLower: normalizeUsername(username),
+                    needsUsername: false,
+                    usernameUpdatedAt: Date.now()
+                }
+            },
+            { returnDocument: "after" }
+        )
+
+        if (!result) {
+            return res.status(404).json({ message: "User not found." })
+        }
+
+        res.json({
+            user: {
+                _id: result._id,
+                username: result.username,
+                email: result.email,
+                emailVerified: Boolean(result.emailVerified),
+                needsUsername: Boolean(result.needsUsername)
+            }
+        })
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({ message: "That username is already taken." })
         }
 
         next(error)
@@ -609,7 +728,8 @@ app.post("/api/login", (req, res, next) => {
                     _id: user._id,
                     username: user.username,
                     email: user.email,
-                    emailVerified: Boolean(user.emailVerified)
+                    emailVerified: Boolean(user.emailVerified),
+                    needsUsername: Boolean(user.needsUsername)
                 }
             })
         })

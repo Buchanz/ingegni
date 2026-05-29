@@ -36,7 +36,7 @@
                 </div>
 
                 <form id="auth-form" class="stacked-form">
-                    <label for="auth-username">Username or email</label>
+                    <label id="auth-username-label" for="auth-username">Username or email</label>
                     <input type="text" name="username" id="auth-username" autocomplete="username" required>
 
                     <label id="auth-email-label" for="auth-email" hidden>Email</label>
@@ -71,6 +71,20 @@
 
             <section id="auth-visual" class="auth-visual" aria-label="Proxima brand">
                 <div class="auth-wordmark">Proxima</div>
+            </section>
+
+            <section id="username-setup" class="username-setup" aria-labelledby="username-title" hidden>
+                <div class="username-card">
+                    <p class="eyebrow">Account name</p>
+                    <h1 id="username-title">Choose your username.</h1>
+                    <p class="support-copy">This is the name people will see on your posts. It has to be unique.</p>
+                    <form id="username-form" class="stacked-form">
+                        <label for="profile-username">Username</label>
+                        <input type="text" name="username" id="profile-username" autocomplete="username" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_.]{3,24}" placeholder="proxima_user" required>
+                        <button class="primary-button" type="submit">Save username</button>
+                        <p id="username-message" class="form-message" aria-live="polite"></p>
+                    </form>
+                </div>
             </section>
 
             <section id="home-screen" class="home-screen" aria-labelledby="home-title" hidden>

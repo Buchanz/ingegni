@@ -1,11 +1,15 @@
 const form = document.getElementById("new-post-form")
 const noteForm = document.getElementById("new-note-form")
 const authForm = document.getElementById("auth-form")
+const usernameForm = document.getElementById("username-form")
 const authCard = document.getElementById("auth-card")
 const homeScreen = document.getElementById("home-screen")
 const postPanel = document.getElementById("post-panel")
 const notesPanel = document.getElementById("notes-panel")
+const sideColumn = document.querySelector(".side-column")
 const homeUsername = document.getElementById("home-username")
+const usernameSetup = document.getElementById("username-setup")
+const usernameMessage = document.getElementById("username-message")
 const authSubmit = document.getElementById("auth-submit")
 const authMessage = document.getElementById("auth-message")
 const postMessage = document.getElementById("post-message")
@@ -16,6 +20,7 @@ const sessionStatus = document.getElementById("session-status")
 const logoutButton = document.getElementById("logout-button")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
+const authUsernameLabel = document.getElementById("auth-username-label")
 const authEmail = document.getElementById("auth-email")
 const authEmailLabel = document.getElementById("auth-email-label")
 const resendVerification = document.getElementById("resend-verification")
@@ -84,6 +89,7 @@ const setAuthMode = (mode) => {
     resendVerification.hidden = !isLogin
     googleLogin.hidden = !isLogin
     microsoftLogin.hidden = !isLogin
+    authUsernameLabel.innerText = isLogin ? "Username or email" : "Username"
     authForm.elements.username.placeholder = isLogin ? "name@example.com" : "Choose a handle"
     authForm.elements.password.autocomplete = isLogin ? "current-password" : "new-password"
     authMessage.innerText = ""
@@ -95,22 +101,27 @@ const updateSessionUI = () => {
 
     if (currentUser) {
         const displayName = currentUser.username || currentUser.email || "creator"
-        sessionStatus.innerText = "Logged in as " + displayName
+        const needsUsername = Boolean(currentUser.needsUsername)
+        sessionStatus.innerText = needsUsername ? "Choose a username to finish setup." : "Logged in as " + displayName
         homeUsername.innerText = displayName
         logoutButton.hidden = false
         authCard.hidden = true
-        homeScreen.hidden = false
-        postPanel.hidden = false
-        notesPanel.hidden = false
+        usernameSetup.hidden = !needsUsername
+        homeScreen.hidden = needsUsername
+        postPanel.hidden = needsUsername
+        notesPanel.hidden = needsUsername
+        sideColumn.hidden = needsUsername
         return
     }
 
     sessionStatus.innerText = "Log in to post and save private notes."
     logoutButton.hidden = true
     authCard.hidden = false
+    usernameSetup.hidden = true
     homeScreen.hidden = true
     postPanel.hidden = true
     notesPanel.hidden = true
+    sideColumn.hidden = false
 }
 
 const getSession = async () => {
@@ -427,6 +438,26 @@ noteForm.addEventListener("submit", async (event) => {
         getNotes()
     } catch (error) {
         noteMessage.innerText = error.message
+    }
+})
+
+usernameForm.addEventListener("submit", async (event) => {
+    event.preventDefault()
+    usernameMessage.innerText = ""
+
+    try {
+        const data = await request("/api/me/username", {
+            method: "PATCH",
+            body: JSON.stringify({ username: usernameForm.elements.username.value })
+        })
+
+        currentUser = data.user
+        usernameForm.reset()
+        updateSessionUI()
+        getPosts()
+        getNotes()
+    } catch (error) {
+        usernameMessage.innerText = error.message
     }
 })
 

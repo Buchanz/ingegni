@@ -345,6 +345,7 @@ button:disabled {
 }
 
 .auth-card,
+.username-card,
 .home-hero,
 .composer-panel,
 .notes-panel,
@@ -365,6 +366,7 @@ button:disabled {
 }
 
 .home-screen,
+.username-setup,
 .side-column {
   display: grid;
   gap: 18px;
@@ -377,6 +379,21 @@ button:disabled {
   gap: 18px;
   min-height: 245px;
   padding: 28px;
+}
+
+.username-setup {
+  grid-column: 1 / -1;
+  place-items: center;
+  min-height: 62vh;
+}
+
+.username-card {
+  width: min(100%, 460px);
+  padding: 28px;
+}
+
+.username-card h1 {
+  max-width: 11ch;
 }
 
 .home-hero h1 {
