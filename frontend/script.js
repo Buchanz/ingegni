@@ -98,9 +98,9 @@ const setAuthMode = (mode) => {
     authEmail.hidden = isLogin
     authEmailLabel.hidden = isLogin
     authEmail.required = !isLogin
-    resendVerification.hidden = !isLogin
-    googleLogin.hidden = !isLogin
-    microsoftLogin.hidden = !isLogin
+    resendVerification.hidden = false
+    googleLogin.hidden = false
+    microsoftLogin.hidden = false
     authUsernameLabel.innerText = isLogin ? "Username or email" : "Username"
     authForm.elements.username.placeholder = isLogin ? "Email or username" : "Username"
     authForm.elements.email.placeholder = "Email"
@@ -616,7 +616,7 @@ resendVerification.addEventListener("click", async () => {
     try {
         const data = await request("/api/resend-verification", {
             method: "POST",
-            body: JSON.stringify({ email: authForm.elements.username.value })
+            body: JSON.stringify({ email: authForm.elements.email.value || authForm.elements.username.value })
         })
 
         authMessage.innerText = data.message
