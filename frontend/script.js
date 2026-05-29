@@ -102,7 +102,9 @@ const setAuthMode = (mode) => {
     googleLogin.hidden = !isLogin
     microsoftLogin.hidden = !isLogin
     authUsernameLabel.innerText = isLogin ? "Username or email" : "Username"
-    authForm.elements.username.placeholder = isLogin ? "name@example.com" : "Choose a handle"
+    authForm.elements.username.placeholder = isLogin ? "Email or username" : "Username"
+    authForm.elements.email.placeholder = "Email"
+    authForm.elements.password.placeholder = "Password"
     authForm.elements.password.autocomplete = isLogin ? "current-password" : "new-password"
     authMessage.innerText = ""
 }

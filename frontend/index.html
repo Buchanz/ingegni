@@ -44,15 +44,14 @@
 
                 <form id="auth-form" class="stacked-form">
                     <label id="auth-username-label" for="auth-username">Username or email</label>
-                    <input type="text" name="username" id="auth-username" autocomplete="username" required>
+                    <input type="text" name="username" id="auth-username" autocomplete="username" placeholder="Email or username" required>
 
                     <label id="auth-email-label" for="auth-email" hidden>Email</label>
-                    <input type="email" name="email" id="auth-email" autocomplete="email" hidden>
+                    <input type="email" name="email" id="auth-email" autocomplete="email" placeholder="Email" hidden>
 
                     <label for="auth-password">Password</label>
-                    <input type="password" name="password" id="auth-password" autocomplete="current-password" required minlength="6">
+                    <input type="password" name="password" id="auth-password" autocomplete="current-password" placeholder="Password" required minlength="6">
 
-                    <button id="auth-submit" class="primary-button" type="submit">Continue</button>
                     <p id="auth-message" class="form-message" aria-live="polite"></p>
                 </form>
 
@@ -71,6 +70,7 @@
                     </button>
                     <div class="auth-divider"><span>or</span></div>
                     <button id="resend-verification" class="text-button" type="button">Resend verification email</button>
+                    <button id="auth-submit" class="primary-button" type="submit" form="auth-form">Continue</button>
                 </div>
             </section>
 
