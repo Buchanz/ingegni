@@ -183,21 +183,6 @@ button:disabled {
   flex: 0 0 22px;
 }
 
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #71767b;
-  font-size: 0.9rem;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: #2f3336;
-}
 
 .is-auth-page .text-button {
   align-self: center;
@@ -1386,14 +1371,6 @@ body.is-authenticated {
   transform: translateY(-2px);
 }
 
-.is-auth-page .auth-divider {
-  color: rgba(15, 20, 25, 0.5);
-}
-
-.is-auth-page .auth-divider::before,
-.is-auth-page .auth-divider::after {
-  background: rgba(15, 20, 25, 0.18);
-}
 
 .is-auth-page .auth-wordmark {
   color: #111820;
@@ -1466,10 +1443,6 @@ body.is-auth-page {
   font-size: clamp(0.78rem, 1.7vh, 0.92rem);
 }
 
-.is-auth-page .auth-divider {
-  gap: clamp(8px, 1.4vh, 12px);
-  font-size: clamp(0.76rem, 1.6vh, 0.9rem);
-}
 
 .is-auth-page .auth-visual {
   min-height: 0;
@@ -1673,7 +1646,7 @@ body.is-auth-page {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 20px 44px rgba(29, 155, 240, 0.22);
 }
 
-.is-auth-page .provider-actions #auth-submit {
+.is-auth-page #auth-form #auth-submit {
   margin-top: 0;
 }
 

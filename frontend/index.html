@@ -52,6 +52,9 @@
                     <label for="auth-password">Password</label>
                     <input type="password" name="password" id="auth-password" autocomplete="current-password" placeholder="Password" required minlength="6">
 
+                    <button id="resend-verification" class="text-button" type="button">Resend verification email</button>
+                    <button id="auth-submit" class="primary-button" type="submit">Continue</button>
+
                     <p id="auth-message" class="form-message" aria-live="polite"></p>
                 </form>
 
@@ -68,9 +71,6 @@
                         <img class="provider-logo" src="assets/microsoft-logo.png" alt="" aria-hidden="true">
                         Continue with Microsoft
                     </button>
-                    <div class="auth-divider"><span>or</span></div>
-                    <button id="resend-verification" class="text-button" type="button">Resend verification email</button>
-                    <button id="auth-submit" class="primary-button" type="submit" form="auth-form">Continue</button>
                 </div>
             </section>
 
