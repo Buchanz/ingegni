@@ -3,10 +3,11 @@ const noteForm = document.getElementById("new-note-form")
 const authForm = document.getElementById("auth-form")
 const usernameForm = document.getElementById("username-form")
 const authCard = document.getElementById("auth-card")
+const authVisual = document.getElementById("auth-visual")
 const homeScreen = document.getElementById("home-screen")
 const postPanel = document.getElementById("post-panel")
 const notesPanel = document.getElementById("notes-panel")
-const sideColumn = document.querySelector(".side-column")
+const profileView = document.getElementById("profile-view")
 const homeUsername = document.getElementById("home-username")
 const usernameSetup = document.getElementById("username-setup")
 const usernameMessage = document.getElementById("username-message")
@@ -18,6 +19,8 @@ const postCount = document.getElementById("post-count")
 const noteCount = document.getElementById("note-count")
 const sessionStatus = document.getElementById("session-status")
 const logoutButton = document.getElementById("logout-button")
+const profileButton = document.getElementById("profile-button")
+const profileInitials = document.getElementById("profile-initials")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
 const authUsernameLabel = document.getElementById("auth-username-label")
@@ -27,8 +30,15 @@ const resendVerification = document.getElementById("resend-verification")
 const googleLogin = document.getElementById("google-login")
 const microsoftLogin = document.getElementById("microsoft-login")
 const appleLogin = document.getElementById("apple-login")
-const refreshWeather = document.getElementById("refresh-weather")
-const weatherCard = document.getElementById("weather-card")
+const weatherInline = document.getElementById("weather-inline")
+const userSearchForm = document.getElementById("user-search-form")
+const userSearch = document.getElementById("user-search")
+const userSearchResults = document.getElementById("user-search-results")
+const backToFeed = document.getElementById("back-to-feed")
+const profileTitle = document.getElementById("profile-title")
+const profileMeta = document.getElementById("profile-meta")
+const profileAvatar = document.getElementById("profile-avatar")
+const profilePosts = document.getElementById("profile-posts")
 const baseURL = window.location.hostname.includes("github.io")
     ? "https://ingegni.onrender.com"
     : window.location.protocol === "file:"
@@ -42,6 +52,8 @@ const storedToken = localStorage.getItem(authTokenKey) || localStorage.getItem(o
 let authMode = "login"
 let currentUser = null
 let authToken = storedToken
+let searchTimer = null
+let activeProfileUsername = ""
 
 if (storedToken && !localStorage.getItem(authTokenKey)) {
     localStorage.setItem(authTokenKey, storedToken)
@@ -95,6 +107,20 @@ const setAuthMode = (mode) => {
     authMessage.innerText = ""
 }
 
+const closeSearchResults = () => {
+    userSearchResults.innerHTML = ""
+    userSearchResults.hidden = true
+}
+
+const showHomeFeed = () => {
+    const needsUsername = Boolean(currentUser?.needsUsername)
+    activeProfileUsername = ""
+    profileView.hidden = true
+    homeScreen.hidden = needsUsername || !currentUser
+    postPanel.hidden = needsUsername || !currentUser
+    closeSearchResults()
+}
+
 const updateSessionUI = () => {
     document.body.classList.toggle("is-authenticated", Boolean(currentUser))
     document.body.classList.toggle("is-auth-page", !currentUser)
@@ -102,26 +128,36 @@ const updateSessionUI = () => {
     if (currentUser) {
         const displayName = currentUser.username || currentUser.email || "creator"
         const needsUsername = Boolean(currentUser.needsUsername)
-        sessionStatus.innerText = needsUsername ? "Choose a username to finish setup." : "Logged in as " + displayName
-        homeUsername.innerText = displayName
+
+        sessionStatus.innerText = needsUsername ? "Choose a username" : "@" + displayName
+        profileInitials.innerText = getInitials(displayName)
+        profileButton.hidden = needsUsername
         logoutButton.hidden = false
+        userSearchForm.hidden = needsUsername
+        weatherInline.hidden = needsUsername
         authCard.hidden = true
+        authVisual.hidden = true
         usernameSetup.hidden = !needsUsername
         homeScreen.hidden = needsUsername
         postPanel.hidden = needsUsername
-        notesPanel.hidden = needsUsername
-        sideColumn.hidden = needsUsername
+        notesPanel.hidden = true
+        profileView.hidden = true
         return
     }
 
-    sessionStatus.innerText = "Log in to post and save private notes."
+    sessionStatus.innerText = "Log in to post and search users."
+    profileButton.hidden = true
     logoutButton.hidden = true
+    userSearchForm.hidden = true
+    weatherInline.hidden = true
     authCard.hidden = false
+    authVisual.hidden = false
     usernameSetup.hidden = true
     homeScreen.hidden = true
     postPanel.hidden = true
     notesPanel.hidden = true
-    sideColumn.hidden = false
+    profileView.hidden = true
+    closeSearchResults()
 }
 
 const getSession = async () => {
@@ -144,7 +180,7 @@ const getPosts = async () => {
 }
 
 const getNotes = async () => {
-    if (!currentUser) {
+    if (!noteForm || !currentUser) {
         addNotesToPage([])
         return []
     }
@@ -186,6 +222,65 @@ const formatAge = (timecreated) => {
     return numberOfUnits + " " + unitOfTime + (numberOfUnits !== 1 ? "s" : "") + " ago"
 }
 
+const createPostElement = (post, afterDelete) => {
+    const newListItem = document.createElement("li")
+    newListItem.className = "post"
+
+    const avatar = document.createElement("button")
+    avatar.className = "post-avatar"
+    avatar.type = "button"
+    avatar.innerText = getInitials(post.author)
+    avatar.setAttribute("aria-label", "Open " + post.author + " profile")
+    avatar.addEventListener("click", () => loadUserProfile(post.author))
+
+    const postContent = document.createElement("article")
+    postContent.className = "post-content"
+
+    const postHeader = document.createElement("div")
+    postHeader.className = "post-header"
+
+    const authorGroup = document.createElement("div")
+
+    const usernameLabel = document.createElement("button")
+    usernameLabel.className = "post-author"
+    usernameLabel.type = "button"
+    usernameLabel.innerText = "@" + post.author
+    usernameLabel.addEventListener("click", () => loadUserProfile(post.author))
+
+    const timeLabel = document.createElement("p")
+    timeLabel.className = "post-time"
+    timeLabel.innerText = formatAge(post.timecreated)
+
+    authorGroup.appendChild(usernameLabel)
+    authorGroup.appendChild(timeLabel)
+    postHeader.appendChild(authorGroup)
+
+    if (currentUser && post.authorId === currentUser._id) {
+        const deleteButton = document.createElement("button")
+        deleteButton.className = "delete-button"
+        deleteButton.type = "button"
+        deleteButton.innerText = "Remove"
+
+        deleteButton.addEventListener("click", async () => {
+            await request("/api/posts/" + post._id, { method: "DELETE" })
+            afterDelete()
+        })
+
+        postHeader.appendChild(deleteButton)
+    }
+
+    const postBody = document.createElement("p")
+    postBody.className = "post-body"
+    postBody.innerText = post.body
+
+    postContent.appendChild(postHeader)
+    postContent.appendChild(postBody)
+
+    newListItem.appendChild(avatar)
+    newListItem.appendChild(postContent)
+    return newListItem
+}
+
 const addPostsToPage = (posts) => {
     const allPosts = document.getElementById("all-posts")
     allPosts.innerHTML = ""
@@ -200,62 +295,33 @@ const addPostsToPage = (posts) => {
     }
 
     posts.forEach(post => {
-        const newListItem = document.createElement("li")
-        newListItem.className = "post"
+        allPosts.appendChild(createPostElement(post, getPosts))
+    })
+}
 
-        const avatar = document.createElement("div")
-        avatar.className = "post-avatar"
-        avatar.innerText = getInitials(post.author)
+const addProfilePostsToPage = (posts) => {
+    profilePosts.innerHTML = ""
 
-        const postContent = document.createElement("article")
-        postContent.className = "post-content"
+    if (posts.length === 0) {
+        const emptyItem = document.createElement("li")
+        emptyItem.className = "empty-state"
+        emptyItem.innerHTML = "<strong>No posts here yet.</strong><span>This profile has not posted anything publicly.</span>"
+        profilePosts.appendChild(emptyItem)
+        return
+    }
 
-        const postHeader = document.createElement("div")
-        postHeader.className = "post-header"
-
-        const authorGroup = document.createElement("div")
-
-        const usernameLabel = document.createElement("p")
-        usernameLabel.className = "post-author"
-        usernameLabel.innerText = post.author
-
-        const timeLabel = document.createElement("p")
-        timeLabel.className = "post-time"
-        timeLabel.innerText = formatAge(post.timecreated)
-
-        authorGroup.appendChild(usernameLabel)
-        authorGroup.appendChild(timeLabel)
-        postHeader.appendChild(authorGroup)
-
-        if (currentUser && post.authorId === currentUser._id) {
-            const deleteButton = document.createElement("button")
-            deleteButton.className = "delete-button"
-            deleteButton.type = "button"
-            deleteButton.innerText = "Remove"
-
-            deleteButton.addEventListener("click", async () => {
-                await request("/api/posts/" + post._id, { method: "DELETE" })
-                getPosts()
-            })
-
-            postHeader.appendChild(deleteButton)
-        }
-
-        const postBody = document.createElement("p")
-        postBody.className = "post-body"
-        postBody.innerText = post.body
-
-        postContent.appendChild(postHeader)
-        postContent.appendChild(postBody)
-
-        newListItem.appendChild(avatar)
-        newListItem.appendChild(postContent)
-        allPosts.appendChild(newListItem)
+    posts.forEach(post => {
+        profilePosts.appendChild(createPostElement(post, () => loadUserProfile(activeProfileUsername)))
     })
 }
 
 const addNotesToPage = (notes) => {
     const allNotes = document.getElementById("all-notes")
+
+    if (!allNotes || !noteCount) {
+        return
+    }
+
     allNotes.innerHTML = ""
     noteCount.innerText = notes.length === 1 ? "1 note" : notes.length + " notes"
 
@@ -345,27 +411,12 @@ const weatherDescriptions = {
 
 const renderWeather = (data, label) => {
     const current = data.current
-    const daily = data.daily
     const summary = weatherDescriptions[current.weather_code] || "Current conditions"
-    const high = Math.round(daily.temperature_2m_max[0])
-    const low = Math.round(daily.temperature_2m_min[0])
-    const rain = daily.precipitation_probability_max[0]
-
-    weatherCard.innerHTML = [
-        '<p class="weather-location">' + label + "</p>",
-        '<p class="weather-temp">' + Math.round(current.temperature_2m) + "°F</p>",
-        '<p class="weather-summary">' + summary + ". Feels like " + Math.round(current.apparent_temperature) + "°F.</p>",
-        '<div class="weather-details">',
-        "<span>High " + high + "°</span>",
-        "<span>Low " + low + "°</span>",
-        "<span>Rain " + rain + "%</span>",
-        "<span>Wind " + Math.round(current.wind_speed_10m) + " mph</span>",
-        "</div>"
-    ].join("")
+    weatherInline.innerText = label + " " + Math.round(current.temperature_2m) + "°F · " + summary
 }
 
 const loadWeather = async (coords = { latitude: 49.2827, longitude: -123.1207 }, label = "Vancouver") => {
-    weatherCard.innerHTML = '<p class="weather-summary">Loading weather...</p>'
+    weatherInline.innerText = "Loading weather..."
     const params = new URLSearchParams({
         latitude: coords.latitude,
         longitude: coords.longitude,
@@ -386,19 +437,63 @@ const loadWeather = async (coords = { latitude: 49.2827, longitude: -123.1207 },
     renderWeather(data, label)
 }
 
-const useDeviceWeather = () => {
-    if (!navigator.geolocation) {
-        loadWeather()
+const renderSearchResults = (users) => {
+    userSearchResults.innerHTML = ""
+
+    if (users.length === 0) {
+        const empty = document.createElement("p")
+        empty.className = "search-empty"
+        empty.innerText = "No users found."
+        userSearchResults.appendChild(empty)
+        userSearchResults.hidden = false
         return
     }
 
-    weatherCard.innerHTML = '<p class="weather-summary">Checking your location...</p>'
-    navigator.geolocation.getCurrentPosition(
-        position => {
-            loadWeather(position.coords, "Your area").catch(() => loadWeather())
-        },
-        () => loadWeather()
-    )
+    users.forEach(user => {
+        const button = document.createElement("button")
+        button.type = "button"
+        button.className = "search-result"
+        button.innerHTML = "<span>" + getInitials(user.username) + "</span><strong>@" + user.username + "</strong>"
+        button.addEventListener("click", () => loadUserProfile(user.username))
+        userSearchResults.appendChild(button)
+    })
+
+    userSearchResults.hidden = false
+}
+
+const searchUsers = async (query) => {
+    const trimmed = query.trim()
+
+    if (trimmed.length < 2) {
+        closeSearchResults()
+        return []
+    }
+
+    const data = await request("/api/users/search?q=" + encodeURIComponent(trimmed))
+    renderSearchResults(data.users)
+    return data.users
+}
+
+const loadUserProfile = async (username) => {
+    if (!currentUser || currentUser.needsUsername) {
+        return
+    }
+
+    activeProfileUsername = username
+    closeSearchResults()
+    userSearch.value = ""
+
+    const data = await request("/api/users/" + encodeURIComponent(username))
+    const profileUsername = data.user.username
+    profileTitle.innerText = "@" + profileUsername
+    profileMeta.innerText = (data.posts.length === 1 ? "1 public post" : data.posts.length + " public posts")
+    profileAvatar.innerText = getInitials(profileUsername)
+    addProfilePostsToPage(data.posts)
+
+    homeScreen.hidden = true
+    postPanel.hidden = true
+    profileView.hidden = false
+    window.scrollTo({ top: 0, behavior: "smooth" })
 }
 
 showLogin.addEventListener("click", () => setAuthMode("login"))
@@ -415,31 +510,34 @@ form.addEventListener("submit", async (event) => {
         })
 
         form.reset()
+        showHomeFeed()
         getPosts()
     } catch (error) {
         postMessage.innerText = error.message
     }
 })
 
-noteForm.addEventListener("submit", async (event) => {
-    event.preventDefault()
-    noteMessage.innerText = ""
+if (noteForm) {
+    noteForm.addEventListener("submit", async (event) => {
+        event.preventDefault()
+        noteMessage.innerText = ""
 
-    try {
-        await request("/api/notes", {
-            method: "POST",
-            body: JSON.stringify({
-                title: noteForm.elements.title.value,
-                body: noteForm.elements.body.value
+        try {
+            await request("/api/notes", {
+                method: "POST",
+                body: JSON.stringify({
+                    title: noteForm.elements.title.value,
+                    body: noteForm.elements.body.value
+                })
             })
-        })
 
-        noteForm.reset()
-        getNotes()
-    } catch (error) {
-        noteMessage.innerText = error.message
-    }
-})
+            noteForm.reset()
+            getNotes()
+        } catch (error) {
+            noteMessage.innerText = error.message
+        }
+    })
+}
 
 usernameForm.addEventListener("submit", async (event) => {
     event.preventDefault()
@@ -536,7 +634,46 @@ logoutButton.addEventListener("click", async () => {
     getNotes()
 })
 
-refreshWeather.addEventListener("click", useDeviceWeather)
+profileButton.addEventListener("click", () => {
+    if (currentUser?.username) {
+        loadUserProfile(currentUser.username)
+    }
+})
+
+backToFeed.addEventListener("click", () => {
+    showHomeFeed()
+    getPosts()
+})
+
+userSearch.addEventListener("input", () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+        searchUsers(userSearch.value).catch(error => {
+            userSearchResults.innerHTML = '<p class="search-empty">' + error.message + '</p>'
+            userSearchResults.hidden = false
+        })
+    }, 180)
+})
+
+userSearchForm.addEventListener("submit", async (event) => {
+    event.preventDefault()
+
+    try {
+        const users = await searchUsers(userSearch.value)
+        if (users[0]) {
+            loadUserProfile(users[0].username)
+        }
+    } catch (error) {
+        userSearchResults.innerHTML = '<p class="search-empty">' + error.message + '</p>'
+        userSearchResults.hidden = false
+    }
+})
+
+document.addEventListener("click", (event) => {
+    if (!userSearchForm.contains(event.target)) {
+        closeSearchResults()
+    }
+})
 
 setAuthMode("login")
 
@@ -580,6 +717,6 @@ getSession()
         sessionStatus.innerText = "Could not reach the server."
         authMessage.innerText = error.message
         loadWeather().catch(() => {
-            weatherCard.innerHTML = '<p class="weather-summary">Weather is unavailable right now.</p>'
+            weatherInline.innerText = "Weather unavailable"
         })
     })

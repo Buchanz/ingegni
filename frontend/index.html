@@ -17,8 +17,20 @@
                     <span class="brand-subtitle">Social feed + personal workspace</span>
                 </span>
             </a>
+
+            <form id="user-search-form" class="user-search" role="search" hidden>
+                <label class="sr-only" for="user-search">Search users</label>
+                <input id="user-search" type="search" autocomplete="off" placeholder="Search users" aria-label="Search users">
+                <div id="user-search-results" class="search-results" hidden></div>
+            </form>
+
+            <p id="weather-inline" class="weather-inline" hidden>Weather loading...</p>
+
             <div class="session-panel">
                 <p id="session-status">Checking session...</p>
+                <button id="profile-button" class="profile-button" type="button" aria-label="Open my profile" hidden>
+                    <span id="profile-initials">P</span>
+                </button>
                 <button id="logout-button" class="ghost-button" type="button" hidden>Log out</button>
             </div>
         </header>
@@ -87,27 +99,19 @@
                 </div>
             </section>
 
-            <section id="home-screen" class="home-screen" aria-labelledby="home-title" hidden>
-                <div class="home-hero">
-                    <div>
-                        <p class="eyebrow">Home</p>
-                        <h1 id="home-title">Welcome back, <span id="home-username">creator</span>.</h1>
-                        <p class="support-copy">Post to the public feed, keep your own notes, and check the weather before planning your day.</p>
-                    </div>
-                    <div class="home-badge" aria-hidden="true">Signed in</div>
-                </div>
-
+            <section id="home-screen" class="home-screen feed-home" aria-labelledby="feed-title" hidden>
                 <section id="post-panel" class="composer-panel">
-                    <div class="section-heading">
+                    <div class="section-heading feed-heading">
                         <div>
-                            <p class="eyebrow">Public</p>
-                            <h2>New post</h2>
+                            <p class="eyebrow">Home</p>
+                            <h1 id="home-title">Recent posts</h1>
                         </div>
+                        <p id="post-count" class="count-pill">0 posts</p>
                     </div>
 
                     <form id="new-post-form" class="composer-form">
-                        <label for="post-body">What's happening?</label>
-                        <textarea name="body" id="post-body" rows="4" maxlength="280" placeholder="Share a quick update, thought, question, or project note." required></textarea>
+                        <label class="sr-only" for="post-body">What's happening?</label>
+                        <textarea name="body" id="post-body" rows="3" maxlength="280" placeholder="What's happening?" required></textarea>
                         <div class="composer-footer">
                             <p id="post-message" class="form-message" aria-live="polite"></p>
                             <button class="primary-button" type="submit">Post</button>
@@ -115,7 +119,17 @@
                     </form>
                 </section>
 
-                <section id="notes-panel" class="notes-panel" aria-labelledby="notes-title">
+                <section class="feed-panel" aria-labelledby="feed-title">
+                    <div class="section-heading feed-heading feed-title-row">
+                        <div>
+                            <p class="eyebrow">Public feed</p>
+                            <h2 id="feed-title">Latest from everyone</h2>
+                        </div>
+                    </div>
+                    <ul id="all-posts" class="post-list"></ul>
+                </section>
+
+                <section id="notes-panel" class="notes-panel" aria-labelledby="notes-title" hidden>
                     <div class="section-heading feed-heading">
                         <div>
                             <p class="eyebrow">Private</p>
@@ -140,32 +154,26 @@
                 </section>
             </section>
 
-            <aside class="side-column" aria-label="Feed and weather">
-                <section class="weather-panel" aria-labelledby="weather-title">
-                    <div class="section-heading feed-heading">
+            <section id="profile-view" class="profile-view" aria-labelledby="profile-title" hidden>
+                <button id="back-to-feed" class="text-button back-button" type="button">Back to feed</button>
+                <div class="profile-card">
+                    <div class="profile-avatar" id="profile-avatar">P</div>
+                    <div>
+                        <p class="eyebrow">Profile</p>
+                        <h1 id="profile-title">@proxima</h1>
+                        <p id="profile-meta" class="support-copy">Recent posts</p>
+                    </div>
+                </div>
+                <section class="feed-panel profile-feed" aria-labelledby="profile-posts-title">
+                    <div class="section-heading feed-heading feed-title-row">
                         <div>
-                            <p class="eyebrow">Weather</p>
-                            <h2 id="weather-title">Today</h2>
+                            <p class="eyebrow">User posts</p>
+                            <h2 id="profile-posts-title">Posts</h2>
                         </div>
-                        <button id="refresh-weather" class="icon-button" type="button" aria-label="Use my location">↻</button>
                     </div>
-                    <div id="weather-card" class="weather-card">
-                        <p class="weather-temp">--°</p>
-                        <p class="weather-summary">Loading Vancouver weather...</p>
-                    </div>
+                    <ul id="profile-posts" class="post-list"></ul>
                 </section>
-
-                <section class="feed-panel" aria-labelledby="feed-title">
-                    <div class="section-heading feed-heading">
-                        <div>
-                            <p class="eyebrow">Public feed</p>
-                            <h2 id="feed-title">Latest posts</h2>
-                        </div>
-                        <p id="post-count" class="count-pill">0 posts</p>
-                    </div>
-                    <ul id="all-posts" class="post-list"></ul>
-                </section>
-            </aside>
+            </section>
         </main>
         <footer class="auth-page-footer">2026 Proxima</footer>
     </div>

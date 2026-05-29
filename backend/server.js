@@ -25,7 +25,7 @@ const isProduction = process.env.NODE_ENV === "production"
 const frontendURL = envValue("FRONTEND_URL", isProduction ? "https://buchanz.github.io/ingegni/" : "http://localhost:3000")
 const apiPublicURL = envValue("API_PUBLIC_URL", isProduction ? "https://ingegni.onrender.com" : "http://localhost:3000")
 const resendAPIKey = envValue("RESEND_API_KEY")
-const resendFromEmail = envValue("RESEND_FROM_EMAIL", "Ingegni <onboarding@resend.dev>")
+const resendFromEmail = envValue("RESEND_FROM_EMAIL", "Proxima <onboarding@resend.dev>")
 const verificationTokenTTL = 1000 * 60 * 60 * 24
 const authTokenTTL = 1000 * 60 * 60 * 24 * 7
 const googleClientID = envValue("GOOGLE_CLIENT_ID")
@@ -240,14 +240,14 @@ async function sendVerificationEmail(user, token) {
         body: JSON.stringify({
             from: resendFromEmail,
             to: [user.email],
-            subject: "Verify your Ingegni account",
+            subject: "Verify your Proxima account",
             html: [
-                "<h1>Verify your Ingegni account</h1>",
+                "<h1>Verify your Proxima account</h1>",
                 "<p>Click the link below to finish creating your account.</p>",
                 "<p><a href=\"" + verificationURL + "\">Verify email address</a></p>",
                 "<p>This link expires in 24 hours.</p>"
             ].join(""),
-            text: "Verify your Ingegni account: " + verificationURL
+            text: "Verify your Proxima account: " + verificationURL
         })
     })
 
@@ -803,6 +803,84 @@ app.post("/api/logout", (req, res, next) => {
 
         res.json({ message: "Logged out." })
     })
+})
+
+app.get("/api/users/search", requireAuth, async (req, res, next) => {
+    try {
+        const query = normalizeUsername(req.query.q)
+
+        if (!query || query.length < 2) {
+            return res.json({ users: [] })
+        }
+
+        const users = await db.collection("users")
+            .find({
+                needsUsername: { $ne: true },
+                usernameLower: { $regex: "^" + escapeRegex(query), $options: "i" }
+            }, {
+                projection: { username: 1, createdAt: 1 }
+            })
+            .sort({ usernameLower: 1 })
+            .limit(8)
+            .toArray()
+
+        res.json({
+            users: users.map(user => ({
+                _id: user._id,
+                username: user.username,
+                createdAt: user.createdAt
+            }))
+        })
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/api/users/:username", requireAuth, async (req, res, next) => {
+    try {
+        const username = normalizeUsername(req.params.username)
+
+        if (validateUsername(username)) {
+            return res.status(404).json({ message: "User not found." })
+        }
+
+        const user = await db.collection("users").findOne({
+            needsUsername: { $ne: true },
+            $or: [
+                { usernameLower: username },
+                { username: { $regex: "^" + escapeRegex(username) + "$", $options: "i" } }
+            ]
+        }, {
+            projection: { username: 1, createdAt: 1 }
+        })
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found." })
+        }
+
+        const posts = await db.collection("posts")
+            .find({
+                $or: [
+                    { authorId: user._id },
+                    { authorId: user._id.toString() },
+                    { author: user.username }
+                ]
+            })
+            .sort({ timecreated: -1 })
+            .limit(50)
+            .toArray()
+
+        res.json({
+            user: {
+                _id: user._id,
+                username: user.username,
+                createdAt: user.createdAt
+            },
+            posts
+        })
+    } catch (error) {
+        next(error)
+    }
 })
 
 app.get("/api/posts", async (req, res, next) => {
