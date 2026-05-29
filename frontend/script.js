@@ -192,6 +192,42 @@ const getNotes = async () => {
     return notes
 }
 
+
+const normalizeUsernameInput = (value) => String(value || "").trim().toLowerCase()
+
+const getSignupUsername = () => {
+    const username = normalizeUsernameInput(authForm.elements.username.value)
+
+    if (!username) {
+        authMessage.innerText = "Choose a username before creating an account."
+        return ""
+    }
+
+    if (!/^[a-z0-9_.]{3,24}$/.test(username) || username.startsWith(".") || username.endsWith(".")) {
+        authMessage.innerText = "Username must be 3-24 characters and can only use letters, numbers, underscores, or periods."
+        return ""
+    }
+
+    return username
+}
+
+const startProviderAuth = (provider) => {
+    authMessage.innerText = ""
+    const username = authMode === "signup" ? getSignupUsername() : ""
+
+    if (authMode === "signup" && !username) {
+        return
+    }
+
+    const params = new URLSearchParams()
+
+    if (username) {
+        params.set("username", username)
+    }
+
+    window.location.href = baseURL + "/auth/" + provider + (params.toString() ? "?" + params.toString() : "")
+}
+
 const getInitials = (name = "?") => {
     return name
         .split(/[\s._-]+/)
@@ -599,11 +635,11 @@ authForm.addEventListener("submit", async (event) => {
 })
 
 googleLogin.addEventListener("click", () => {
-    window.location.href = baseURL + "/auth/google"
+    startProviderAuth("google")
 })
 
 microsoftLogin.addEventListener("click", () => {
-    window.location.href = baseURL + "/auth/microsoft"
+    startProviderAuth("microsoft")
 })
 
 appleLogin.addEventListener("click", () => {
@@ -711,6 +747,16 @@ if (queryParams.get("login") === "failed") {
 
 if (queryParams.get("login") === "microsoft_failed") {
     authMessage.innerText = "Microsoft sign-in did not complete. Check the Render logs for the callback error."
+}
+
+if (queryParams.get("login") === "username_taken") {
+    setAuthMode("signup")
+    authMessage.innerText = "That username is already taken. Choose another one before continuing."
+}
+
+if (queryParams.get("login") === "username_invalid") {
+    setAuthMode("signup")
+    authMessage.innerText = "Choose a valid username before continuing."
 }
 
 getSession()

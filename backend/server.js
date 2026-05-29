@@ -28,6 +28,7 @@ const resendAPIKey = envValue("RESEND_API_KEY")
 const resendFromEmail = envValue("RESEND_FROM_EMAIL", "Proxima <onboarding@resend.dev>")
 const verificationTokenTTL = 1000 * 60 * 60 * 24
 const authTokenTTL = 1000 * 60 * 60 * 24 * 7
+const oauthStateTTL = 1000 * 60 * 10
 const googleClientID = envValue("GOOGLE_CLIENT_ID")
 const googleClientSecret = envValue("GOOGLE_CLIENT_SECRET")
 const googleCallbackURL = envValue("GOOGLE_CALLBACK_URL", apiPublicURL + "/auth/google/callback")
@@ -158,6 +159,47 @@ function createAuthToken(user) {
     return payload + "." + signTokenPart(payload)
 }
 
+function createOAuthState(data = {}) {
+    const payload = encodeTokenPart({
+        ...data,
+        exp: Date.now() + oauthStateTTL
+    })
+
+    return payload + "." + signTokenPart(payload)
+}
+
+function verifySignedPayload(token) {
+    const [payload, signature] = String(token || "").split(".")
+
+    if (!payload || !signature) {
+        return null
+    }
+
+    const expectedSignature = signTokenPart(payload)
+    const provided = Buffer.from(signature)
+    const expected = Buffer.from(expectedSignature)
+
+    if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+        return null
+    }
+
+    try {
+        const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"))
+
+        if (!decoded.exp || decoded.exp < Date.now()) {
+            return null
+        }
+
+        return decoded
+    } catch (error) {
+        return null
+    }
+}
+
+function verifyOAuthState(state) {
+    return verifySignedPayload(state) || {}
+}
+
 function verifyAuthToken(token) {
     const [payload, signature] = String(token || "").split(".")
 
@@ -196,6 +238,20 @@ function buildFrontendRedirect(params) {
     return redirectURL.toString()
 }
 
+function buildOAuthFailureRedirect(error, fallbackLogin = "failed") {
+    const message = String(error?.message || "")
+
+    if (error?.status === 409 || /username.*taken/i.test(message)) {
+        return buildFrontendRedirect({ login: "username_taken" })
+    }
+
+    if (error?.status === 400 || /username/i.test(message)) {
+        return buildFrontendRedirect({ login: "username_invalid" })
+    }
+
+    return buildFrontendRedirect({ login: fallbackLogin })
+}
+
 async function getRequestUser(req) {
     if (req.user) {
         return req.user
@@ -215,12 +271,22 @@ async function getRequestUser(req) {
         return null
     }
 
+    let needsUsername = Boolean(user.needsUsername)
+
+    if (needsUsername && user.username) {
+        await db.collection("users").updateOne(
+            { _id: user._id },
+            { $set: { needsUsername: false } }
+        )
+        needsUsername = false
+    }
+
     return {
         _id: user._id,
         username: user.username,
         email: user.email,
         emailVerified: Boolean(user.emailVerified),
-        needsUsername: Boolean(user.needsUsername)
+        needsUsername
     }
 }
 
@@ -290,7 +356,7 @@ async function connectDB() {
     console.log("Connected to MongoDB")
 }
 
-async function findOrCreateOAuthUser({ provider, providerId, email, displayName }) {
+async function findOrCreateOAuthUser({ provider, providerId, email, displayName, requestedUsername }) {
     const providerIdField = provider + "Id"
     const existingUser = await db.collection("users").findOne({
         $or: [
@@ -300,34 +366,64 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
     })
 
     if (existingUser) {
-        const needsUsername = existingUser.needsUsername === undefined && existingUser.authProvider !== "local"
-            ? true
-            : Boolean(existingUser.needsUsername)
+        const updates = {
+            [providerIdField]: providerId,
+            email,
+            emailVerified: true,
+            authProvider: existingUser.authProvider || provider,
+            needsUsername: false
+        }
+
+        if (requestedUsername) {
+            const usernameError = validateUsername(requestedUsername)
+
+            if (usernameError) {
+                const error = new Error(usernameError)
+                error.status = 400
+                throw error
+            }
+
+            if (await usernameIsTaken(requestedUsername, existingUser._id)) {
+                const error = new Error("That username is already taken.")
+                error.status = 409
+                throw error
+            }
+
+            updates.username = requestedUsername
+            updates.usernameLower = normalizeUsername(requestedUsername)
+            updates.usernameUpdatedAt = Date.now()
+        }
 
         await db.collection("users").updateOne(
             { _id: existingUser._id },
             {
-                $set: {
-                    [providerIdField]: providerId,
-                    email,
-                    emailVerified: true,
-                    authProvider: existingUser.authProvider || provider,
-                    needsUsername
-                },
+                $set: updates,
                 $unset: { verificationTokenHash: "", verificationExpiresAt: "" }
             }
         )
 
         return {
             ...existingUser,
-            [providerIdField]: providerId,
-            email,
+            ...updates,
             emailVerified: true,
-            needsUsername
+            needsUsername: false
         }
     }
 
-    const username = await createTemporaryUsername(provider)
+    const username = normalizeUsername(requestedUsername)
+    const usernameError = validateUsername(username)
+
+    if (usernameError) {
+        const error = new Error(usernameError)
+        error.status = 400
+        throw error
+    }
+
+    if (await usernameIsTaken(username)) {
+        const error = new Error("That username is already taken.")
+        error.status = 409
+        throw error
+    }
 
     const insertResult = await db.collection("users").insertOne({
         username,
@@ -335,7 +431,7 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
         displayName: displayName || "",
         email,
         emailVerified: true,
-        needsUsername: true,
+        needsUsername: false,
         [providerIdField]: providerId,
         authProvider: provider,
         createdAt: Date.now()
@@ -346,7 +442,7 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName 
         username,
         email,
         emailVerified: true,
-        needsUsername: true
+        needsUsername: false
     }
 }
 
@@ -354,8 +450,9 @@ if (googleClientID && googleClientSecret) {
     passport.use(new GoogleStrategy({
         clientID: googleClientID,
         clientSecret: googleClientSecret,
-        callbackURL: googleCallbackURL
-    }, async (accessToken, refreshToken, profile, done) => {
+        callbackURL: googleCallbackURL,
+        passReqToCallback: true
+    }, async (req, accessToken, refreshToken, profile, done) => {
         try {
             const email = profile.emails?.[0]?.value?.toLowerCase()
 
@@ -367,7 +464,8 @@ if (googleClientID && googleClientSecret) {
                 provider: "google",
                 providerId: profile.id,
                 email,
-                displayName: profile.displayName
+                displayName: profile.displayName,
+                requestedUsername: verifyOAuthState(req.query.state).username
             })
 
             done(null, user)
@@ -384,8 +482,9 @@ if (microsoftClientID && microsoftClientSecret) {
         callbackURL: microsoftCallbackURL,
         tenant: microsoftTenant,
         scope: ["user.read", "openid", "profile", "email"],
-        addUPNAsEmail: true
-    }, async (accessToken, refreshToken, profile, done) => {
+        addUPNAsEmail: true,
+        passReqToCallback: true
+    }, async (req, accessToken, refreshToken, profile, done) => {
         try {
             const email = (profile.emails?.[0]?.value || profile._json?.mail || profile._json?.userPrincipalName || "").toLowerCase()
 
@@ -397,7 +496,8 @@ if (microsoftClientID && microsoftClientSecret) {
                 provider: "microsoft",
                 providerId: profile.id,
                 email,
-                displayName: profile.displayName
+                displayName: profile.displayName,
+                requestedUsername: verifyOAuthState(req.query.state).username
             })
 
             done(null, user)
@@ -738,18 +838,37 @@ app.post("/api/login", (req, res, next) => {
     })(req, res, next)
 })
 
-app.get("/auth/google", (req, res, next) => {
+app.get("/auth/google", async (req, res, next) => {
     if (!googleClientID || !googleClientSecret) {
         return res.status(503).send("Google OAuth is not configured yet.")
     }
 
-    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next)
+    try {
+        const username = normalizeUsername(req.query.username)
+        const state = username ? createOAuthState({ username }) : undefined
+
+        if (username) {
+            const usernameError = validateUsername(username)
+
+            if (usernameError) {
+                return res.redirect(buildFrontendRedirect({ login: "username_invalid" }))
+            }
+        }
+
+        passport.authenticate("google", { scope: ["profile", "email"], state, session: false })(req, res, next)
+    } catch (error) {
+        next(error)
+    }
 })
 
 app.get("/auth/google/callback", (req, res, next) => {
     passport.authenticate("google", { failureRedirect: buildFrontendRedirect({ login: "failed" }) }, (error, user) => {
         if (error) {
-            return next(error)
+            console.error("Google OAuth callback failed:", {
+                message: error.message,
+                stack: error.stack
+            })
+            return res.redirect(buildOAuthFailureRedirect(error, "failed"))
         }
 
         if (!user) {
@@ -766,12 +885,27 @@ app.get("/auth/google/callback", (req, res, next) => {
     })(req, res, next)
 })
 
-app.get("/auth/microsoft", (req, res, next) => {
+app.get("/auth/microsoft", async (req, res, next) => {
     if (!microsoftClientID || !microsoftClientSecret) {
         return res.status(503).send("Microsoft OAuth is not configured yet.")
     }
 
-    passport.authenticate("microsoft", { prompt: "select_account", session: false })(req, res, next)
+    try {
+        const username = normalizeUsername(req.query.username)
+        const state = username ? createOAuthState({ username }) : undefined
+
+        if (username) {
+            const usernameError = validateUsername(username)
+
+            if (usernameError) {
+                return res.redirect(buildFrontendRedirect({ login: "username_invalid" }))
+            }
+        }
+
+        passport.authenticate("microsoft", { prompt: "select_account", state, session: false })(req, res, next)
+    } catch (error) {
+        next(error)
+    }
 })
 
 app.get("/auth/microsoft/callback", (req, res, next) => {
@@ -782,7 +916,7 @@ app.get("/auth/microsoft/callback", (req, res, next) => {
                 oauthError: error.oauthError?.data || error.oauthError?.message,
                 stack: error.stack
             })
-            return res.redirect(buildFrontendRedirect({ login: "microsoft_failed" }))
+            return res.redirect(buildOAuthFailureRedirect(error, "microsoft_failed"))
         }
 
         if (!user) {
