@@ -12,6 +12,7 @@ const homeUsername = document.getElementById("home-username")
 const usernameSetup = document.getElementById("username-setup")
 const usernameMessage = document.getElementById("username-message")
 const authSubmit = document.getElementById("auth-submit")
+const authSubmitLabel = document.getElementById("auth-submit-label")
 const authMessage = document.getElementById("auth-message")
 const postMessage = document.getElementById("post-message")
 const noteMessage = document.getElementById("note-message")
@@ -110,6 +111,7 @@ const request = async (path, options = {}) => {
 }
 
 const setAuthMode = (mode) => {
+    const modeChanged = authMode !== mode
     authMode = mode
     const isLogin = mode === "login"
 
@@ -117,8 +119,32 @@ const setAuthMode = (mode) => {
     authCard.classList.add(isLogin ? "auth-mode-login" : "auth-mode-signup")
     showLogin.classList.toggle("active", isLogin)
     showSignup.classList.toggle("active", !isLogin)
-    morphText(authSubmit, isLogin ? "Continue" : "Create account")
-    authEmail.hidden = isLogin
+    morphText(authSubmitLabel, isLogin ? "Continue" : "Create account")
+    authEmail.classList.remove("email-puff-in", "email-puff-out")
+
+    if (isLogin) {
+        if (modeChanged) {
+            authEmail.hidden = false
+            void authEmail.offsetWidth
+            authEmail.classList.add("email-puff-out")
+            window.setTimeout(() => {
+                if (authMode === "login") {
+                    authEmail.hidden = true
+                }
+                authEmail.classList.remove("email-puff-out")
+            }, 260)
+        } else {
+            authEmail.hidden = true
+        }
+    } else {
+        authEmail.hidden = false
+        if (modeChanged) {
+            void authEmail.offsetWidth
+            authEmail.classList.add("email-puff-in")
+            window.setTimeout(() => authEmail.classList.remove("email-puff-in"), 300)
+        }
+    }
+
     authEmailLabel.hidden = isLogin
     authEmail.style.display = ""
     authEmailLabel.style.display = ""

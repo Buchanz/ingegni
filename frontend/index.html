@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxima</title>
-    <script defer src="script.js?v=20260530-auth-stable"></script>
-    <link rel="stylesheet" href="style.css?v=20260530-auth-stable">
+    <script defer src="script.js?v=20260530-auth-puff"></script>
+    <link rel="stylesheet" href="style.css?v=20260530-auth-puff">
 </head>
 <body class="is-auth-page">
     <div class="app-shell">
@@ -50,7 +50,7 @@
                     <input type="email" name="email" id="auth-email" autocomplete="email" placeholder="Email" hidden>
 
                     <button id="resend-verification" class="text-button" type="button">Resend verification email</button>
-                    <button id="auth-submit" class="primary-button" type="submit">Continue</button>
+                    <button id="auth-submit" class="primary-button" type="submit"><span id="auth-submit-label">Continue</span></button>
 
                     <p id="auth-message" class="form-message" aria-live="polite"></p>
                 </form>

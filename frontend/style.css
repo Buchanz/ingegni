@@ -1729,29 +1729,79 @@ body.is-auth-page::after {
 }
 
 .is-auth-page #auth-email {
+  transform-origin: center;
   transition: opacity 240ms ease, filter 240ms ease, background 240ms ease, border-color 240ms ease;
 }
 
+.is-auth-page #auth-submit-label {
+  display: inline-block;
+  transform-origin: center;
+}
+
+.is-auth-page #auth-email.email-puff-in {
+  animation: auth-email-puff-in 300ms cubic-bezier(0.2, 0.9, 0.22, 1.18) both;
+}
+
+.is-auth-page #auth-email.email-puff-out {
+  animation: auth-email-puff-out 260ms ease both;
+}
+
 .text-morph {
-  animation: auth-text-morph 260ms ease both;
+  animation: auth-text-morph 300ms cubic-bezier(0.2, 0.9, 0.22, 1.18) both;
+}
+
+@keyframes auth-email-puff-in {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(0.92);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(1px);
+    transform: scale(1.035);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-email-puff-out {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(0.92);
+  }
 }
 
 @keyframes auth-text-morph {
   0% {
     opacity: 0.45;
     filter: blur(5px);
+    transform: scale(0.92);
   }
   58% {
     opacity: 0.86;
     filter: blur(1px);
+    transform: scale(1.06);
   }
   100% {
     opacity: 1;
     filter: blur(0);
+    transform: scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .is-auth-page #auth-email.email-puff-in,
+  .is-auth-page #auth-email.email-puff-out,
   .text-morph {
     animation: none;
   }
