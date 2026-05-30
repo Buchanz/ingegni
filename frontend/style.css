@@ -1643,7 +1643,8 @@ body.is-auth-page::after {
   z-index: 1;
 }
 
-.is-auth-page #auth-email[hidden] {
+.is-auth-page #auth-email[hidden],
+.is-auth-page #auth-email-label[hidden] {
   display: none !important;
 }
 
@@ -1701,6 +1702,19 @@ body.is-auth-page::after {
 .is-auth-page .stacked-form,
 .is-auth-page .provider-actions {
   gap: 10px;
+}
+
+.is-auth-page #auth-form {
+  gap: 10px !important;
+}
+
+.is-auth-page #auth-form > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.is-auth-page #auth-form input {
+  flex: 0 0 auto;
 }
 
 .is-auth-page #auth-password {

@@ -104,6 +104,8 @@ const setAuthMode = (mode) => {
     authSubmit.innerText = isLogin ? "Continue" : "Create account"
     authEmail.hidden = isLogin
     authEmailLabel.hidden = isLogin
+    authEmail.style.display = isLogin ? "none" : ""
+    authEmailLabel.style.display = isLogin ? "none" : ""
     authEmail.required = !isLogin
     resendVerification.hidden = false
     googleLogin.hidden = false
