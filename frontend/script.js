@@ -735,6 +735,15 @@ setAuthMode("login")
 
 const queryParams = new URLSearchParams(window.location.search)
 const oauthToken = queryParams.get("token")
+const successLoginProvider = ["google", "microsoft"].includes(queryParams.get("login"))
+
+if (successLoginProvider && !oauthToken) {
+    queryParams.delete("login")
+    const cleanQuery = queryParams.toString()
+    const cleanURL = window.location.pathname + (cleanQuery ? "?" + cleanQuery : "") + window.location.hash
+    window.history.replaceState({}, document.title, cleanURL)
+    authMessage.innerText = ""
+}
 
 if (oauthToken) {
     authToken = oauthToken

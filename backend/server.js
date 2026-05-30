@@ -1053,7 +1053,7 @@ app.get("/auth/google/callback", (req, res, next) => {
                 return next(loginError)
             }
 
-            res.redirect(buildFrontendRedirect({ login: "google", token: createAuthToken(user) }))
+            res.redirect(buildFrontendRedirect({ token: createAuthToken(user) }))
         })
     })(req, res, next)
 })
@@ -1098,7 +1098,7 @@ app.get("/auth/microsoft/callback", (req, res, next) => {
             return res.redirect(buildFrontendRedirect({ login: "microsoft_failed" }))
         }
 
-        res.redirect(buildFrontendRedirect({ login: "microsoft", token: createAuthToken(user) }))
+        res.redirect(buildFrontendRedirect({ token: createAuthToken(user) }))
     })(req, res, next)
 })
 
