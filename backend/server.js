@@ -200,6 +200,42 @@ function verifyOAuthState(state) {
     return verifySignedPayload(state) || {}
 }
 
+function normalizeProfilePicture(value) {
+    return String(value || "").trim()
+}
+
+function validateProfilePicture(value) {
+    if (!value) {
+        return ""
+    }
+
+    if (value.length > 500) {
+        return "Profile picture URL must be 500 characters or less."
+    }
+
+    try {
+        const url = new URL(value)
+        if (!["http:", "https:"].includes(url.protocol)) {
+            return "Profile picture must be an HTTP or HTTPS URL."
+        }
+    } catch (error) {
+        return "Profile picture must be a valid URL."
+    }
+
+    return ""
+}
+
+function userPayload(user) {
+    return {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        emailVerified: Boolean(user.emailVerified),
+        needsUsername: Boolean(user.needsUsername),
+        profilePicture: user.profilePicture || ""
+    }
+}
+
 function verifyAuthToken(token) {
     const [payload, signature] = String(token || "").split(".")
 
@@ -294,7 +330,8 @@ async function getRequestUser(req) {
         username: user.username,
         email: user.email,
         emailVerified: Boolean(user.emailVerified),
-        needsUsername
+        needsUsername,
+        profilePicture: user.profilePicture || ""
     }
 }
 
@@ -453,6 +490,7 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName,
         email,
         emailVerified: true,
         needsUsername: false,
+        profilePicture: "",
         [providerIdField]: providerId,
         authProvider: provider,
         createdAt: Date.now()
@@ -463,7 +501,8 @@ async function findOrCreateOAuthUser({ provider, providerId, email, displayName,
         username,
         email,
         emailVerified: true,
-        needsUsername: false
+        needsUsername: false,
+        profilePicture: ""
     }
 }
 
@@ -582,7 +621,8 @@ passport.deserializeUser(async (id, done) => {
             username: user.username,
             email: user.email,
             emailVerified: Boolean(user.emailVerified),
-            needsUsername: Boolean(user.needsUsername)
+            needsUsername: Boolean(user.needsUsername),
+            profilePicture: user.profilePicture || ""
         })
     } catch (error) {
         done(error)
@@ -639,15 +679,7 @@ app.get("/api/me", async (req, res, next) => {
             return res.json({ user: null })
         }
 
-        res.json({
-            user: {
-                _id: user._id,
-                username: user.username,
-                email: user.email,
-                emailVerified: user.emailVerified,
-                needsUsername: user.needsUsername
-            }
-        })
+        res.json({ user: userPayload(user) })
     } catch (error) {
         next(error)
     }
@@ -689,6 +721,7 @@ app.post("/api/signup", async (req, res, next) => {
             email,
             emailVerified: false,
             needsUsername: false,
+            profilePicture: "",
             verificationTokenHash: verification.tokenHash,
             verificationExpiresAt: verification.expiresAt,
             hashed_password: hashedPassword,
@@ -709,7 +742,8 @@ app.post("/api/signup", async (req, res, next) => {
                 username,
                 email,
                 emailVerified: false,
-                needsUsername: false
+                needsUsername: false,
+                profilePicture: ""
             }
         })
     } catch (error) {
@@ -751,20 +785,131 @@ app.patch("/api/me/username", requireAuth, async (req, res, next) => {
             return res.status(404).json({ message: "User not found." })
         }
 
-        res.json({
-            user: {
-                _id: result._id,
-                username: result.username,
-                email: result.email,
-                emailVerified: Boolean(result.emailVerified),
-                needsUsername: Boolean(result.needsUsername)
-            }
-        })
+        res.json({ user: userPayload(result) })
     } catch (error) {
         if (error.code === 11000) {
             return res.status(409).json({ message: "That username is already taken." })
         }
 
+        next(error)
+    }
+})
+
+
+
+app.patch("/api/me/settings", requireAuth, async (req, res, next) => {
+    try {
+        const currentUser = await db.collection("users").findOne({ _id: new ObjectId(req.user._id) })
+
+        if (!currentUser) {
+            return res.status(404).json({ message: "User not found." })
+        }
+
+        const username = normalizeUsername(req.body.username || currentUser.username)
+        const email = String(req.body.email || currentUser.email || "").trim().toLowerCase()
+        const profilePicture = normalizeProfilePicture(req.body.profilePicture)
+        const usernameError = validateUsername(username)
+        const pictureError = validateProfilePicture(profilePicture)
+
+        if (usernameError) {
+            return res.status(400).json({ message: usernameError })
+        }
+
+        if (!email || !email.includes("@")) {
+            return res.status(400).json({ message: "Please enter a valid email address." })
+        }
+
+        if (pictureError) {
+            return res.status(400).json({ message: pictureError })
+        }
+
+        if (await usernameIsTaken(username, currentUser._id)) {
+            return res.status(409).json({ message: "That username is already taken." })
+        }
+
+        const emailOwner = await db.collection("users").findOne({ email })
+        if (emailOwner && emailOwner._id.toString() !== currentUser._id.toString()) {
+            return res.status(409).json({ message: "That email is already used by another account." })
+        }
+
+        const emailChanged = email !== String(currentUser.email || "").toLowerCase()
+        const update = {
+            username,
+            usernameLower: normalizeUsername(username),
+            email,
+            profilePicture,
+            needsUsername: false,
+            updatedAt: Date.now()
+        }
+
+        let verification
+        if (emailChanged) {
+            verification = createVerificationToken()
+            update.emailVerified = false
+            update.verificationTokenHash = verification.tokenHash
+            update.verificationExpiresAt = verification.expiresAt
+        }
+
+        const result = await db.collection("users").findOneAndUpdate(
+            { _id: currentUser._id },
+            { $set: update },
+            { returnDocument: "after" }
+        )
+
+        let message = "Profile settings saved."
+        if (emailChanged && verification) {
+            const emailResult = await sendVerificationEmail(result, verification.token)
+            message = emailResult.sent
+                ? "Profile settings saved. Check your new email to verify it."
+                : "Profile settings saved, but the verification email did not send. Check Render logs and Resend settings."
+        }
+
+        res.json({ message, user: userPayload(result) })
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({ message: "That username or email is already taken." })
+        }
+
+        next(error)
+    }
+})
+
+app.patch("/api/me/password", requireAuth, async (req, res, next) => {
+    try {
+        const currentPassword = String(req.body.currentPassword || "")
+        const newPassword = String(req.body.newPassword || "")
+        const user = await db.collection("users").findOne({ _id: new ObjectId(req.user._id) })
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found." })
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: "New password must be at least 6 characters." })
+        }
+
+        if (user.hashed_password && user.salt) {
+            const passwordIsValid = await verifyPassword(currentPassword, user)
+
+            if (!passwordIsValid) {
+                return res.status(401).json({ message: "Current password is incorrect." })
+            }
+        }
+
+        const { hashedPassword, salt } = await hashPassword(newPassword)
+        await db.collection("users").updateOne(
+            { _id: user._id },
+            {
+                $set: {
+                    hashed_password: hashedPassword,
+                    salt,
+                    passwordUpdatedAt: Date.now()
+                }
+            }
+        )
+
+        res.json({ message: "Password updated." })
+    } catch (error) {
         next(error)
     }
 })
@@ -980,7 +1125,7 @@ app.get("/api/users/search", requireAuth, async (req, res, next) => {
                 needsUsername: { $ne: true },
                 usernameLower: { $regex: "^" + escapeRegex(query), $options: "i" }
             }, {
-                projection: { username: 1, createdAt: 1 }
+                projection: { username: 1, createdAt: 1, profilePicture: 1 }
             })
             .sort({ usernameLower: 1 })
             .limit(8)
@@ -990,7 +1135,8 @@ app.get("/api/users/search", requireAuth, async (req, res, next) => {
             users: users.map(user => ({
                 _id: user._id,
                 username: user.username,
-                createdAt: user.createdAt
+                createdAt: user.createdAt,
+                profilePicture: user.profilePicture || ""
             }))
         })
     } catch (error) {
@@ -1013,7 +1159,7 @@ app.get("/api/users/:username", requireAuth, async (req, res, next) => {
                 { username: { $regex: "^" + escapeRegex(username) + "$", $options: "i" } }
             ]
         }, {
-            projection: { username: 1, createdAt: 1 }
+            projection: { username: 1, createdAt: 1, profilePicture: 1 }
         })
 
         if (!user) {
@@ -1036,7 +1182,8 @@ app.get("/api/users/:username", requireAuth, async (req, res, next) => {
             user: {
                 _id: user._id,
                 username: user.username,
-                createdAt: user.createdAt
+                createdAt: user.createdAt,
+                profilePicture: user.profilePicture || ""
             },
             posts
         })
@@ -1066,6 +1213,7 @@ app.post("/api/posts", requireAuth, async (req, res, next) => {
             body,
             author: req.user.username,
             authorId: req.user._id,
+            authorProfilePicture: req.user.profilePicture || "",
             timecreated: Date.now()
         }
 

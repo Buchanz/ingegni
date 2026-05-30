@@ -24,25 +24,11 @@
                 <div id="user-search-results" class="search-results" hidden></div>
             </form>
 
-            <p id="weather-inline" class="weather-inline" hidden>Weather loading...</p>
-
             <div class="session-panel">
-                <p id="session-status">Checking session...</p>
-                <button id="profile-button" class="profile-button" type="button" aria-label="Open account settings" aria-expanded="false" hidden>
+                <button id="profile-button" class="profile-button" type="button" aria-label="Open account settings" hidden>
                     <span id="profile-initials">P</span>
                 </button>
-                <div id="account-menu" class="account-menu" hidden>
-                    <div class="account-menu-header">
-                        <span>Signed in as</span>
-                        <strong id="account-username">@proxima</strong>
-                    </div>
-                    <div class="settings-row">
-                        <span>App settings</span>
-                        <strong>Default</strong>
-                    </div>
-                    <button id="view-profile-button" class="menu-button" type="button">View profile</button>
-                    <button id="logout-button" class="menu-button danger" type="button">Log out</button>
-                </div>
+                <p id="session-status">Checking session...</p>
             </div>
         </header>
 
@@ -156,6 +142,53 @@
                     </form>
                     <ul id="all-notes" class="note-list"></ul>
                 </section>
+            </section>
+
+
+
+            <section id="settings-view" class="settings-view" aria-labelledby="settings-title" hidden>
+                <button id="back-from-settings" class="text-button back-button" type="button">Back to feed</button>
+                <div class="settings-card">
+                    <div class="settings-heading">
+                        <div id="settings-avatar-preview" class="profile-avatar settings-avatar">P</div>
+                        <div>
+                            <p class="eyebrow">Account</p>
+                            <h1 id="settings-title">Profile settings</h1>
+                            <p class="support-copy">Manage how your account appears across Proxima.</p>
+                        </div>
+                    </div>
+
+                    <form id="account-settings-form" class="settings-form">
+                        <label for="settings-username">Username</label>
+                        <input type="text" name="username" id="settings-username" autocomplete="username" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_.]{3,24}" required>
+
+                        <label for="settings-email">Email</label>
+                        <input type="email" name="email" id="settings-email" autocomplete="email" required>
+
+                        <label for="settings-profile-picture">Profile picture URL</label>
+                        <input type="url" name="profilePicture" id="settings-profile-picture" placeholder="https://example.com/photo.jpg">
+
+                        <button class="primary-button" type="submit">Save profile</button>
+                        <p id="settings-message" class="form-message" aria-live="polite"></p>
+                    </form>
+
+                    <form id="password-settings-form" class="settings-form password-settings-form">
+                        <h2>Change password</h2>
+                        <label for="settings-current-password">Current password</label>
+                        <input type="password" name="currentPassword" id="settings-current-password" autocomplete="current-password" placeholder="Current password">
+
+                        <label for="settings-new-password">New password</label>
+                        <input type="password" name="newPassword" id="settings-new-password" autocomplete="new-password" minlength="6" placeholder="New password" required>
+
+                        <button class="primary-button" type="submit">Update password</button>
+                        <p id="password-message" class="form-message" aria-live="polite"></p>
+                    </form>
+
+                    <div class="settings-actions">
+                        <button id="settings-view-profile" class="text-button" type="button">View public profile</button>
+                        <button id="settings-logout-button" class="delete-button" type="button">Sign out</button>
+                    </div>
+                </div>
             </section>
 
             <section id="profile-view" class="profile-view" aria-labelledby="profile-title" hidden>

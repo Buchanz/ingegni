@@ -18,12 +18,17 @@ const noteMessage = document.getElementById("note-message")
 const postCount = document.getElementById("post-count")
 const noteCount = document.getElementById("note-count")
 const sessionStatus = document.getElementById("session-status")
-const logoutButton = document.getElementById("logout-button")
 const profileButton = document.getElementById("profile-button")
 const profileInitials = document.getElementById("profile-initials")
-const accountMenu = document.getElementById("account-menu")
-const accountUsername = document.getElementById("account-username")
-const viewProfileButton = document.getElementById("view-profile-button")
+const settingsView = document.getElementById("settings-view")
+const accountSettingsForm = document.getElementById("account-settings-form")
+const passwordSettingsForm = document.getElementById("password-settings-form")
+const settingsAvatarPreview = document.getElementById("settings-avatar-preview")
+const settingsMessage = document.getElementById("settings-message")
+const passwordMessage = document.getElementById("password-message")
+const backFromSettings = document.getElementById("back-from-settings")
+const settingsViewProfile = document.getElementById("settings-view-profile")
+const settingsLogoutButton = document.getElementById("settings-logout-button")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
 const authUsernameLabel = document.getElementById("auth-username-label")
@@ -33,7 +38,6 @@ const resendVerification = document.getElementById("resend-verification")
 const googleLogin = document.getElementById("google-login")
 const microsoftLogin = document.getElementById("microsoft-login")
 const appleLogin = document.getElementById("apple-login")
-const weatherInline = document.getElementById("weather-inline")
 const userSearchForm = document.getElementById("user-search-form")
 const userSearch = document.getElementById("user-search")
 const userSearchResults = document.getElementById("user-search-results")
@@ -117,15 +121,11 @@ const closeSearchResults = () => {
     userSearchResults.hidden = true
 }
 
-const closeAccountMenu = () => {
-    accountMenu.hidden = true
-    profileButton.setAttribute("aria-expanded", "false")
-}
-
 const showHomeFeed = () => {
     const needsUsername = Boolean(currentUser?.needsUsername)
     activeProfileUsername = ""
     profileView.hidden = true
+    settingsView.hidden = true
     homeScreen.hidden = needsUsername || !currentUser
     postPanel.hidden = needsUsername || !currentUser
     closeSearchResults()
@@ -140,14 +140,9 @@ const updateSessionUI = () => {
         const needsUsername = Boolean(currentUser.needsUsername)
 
         sessionStatus.innerText = needsUsername ? "Choose a username" : "@" + displayName
-        profileInitials.innerText = getInitials(displayName)
-        accountUsername.innerText = "@" + displayName
+        renderAvatar(profileInitials, displayName, currentUser.profilePicture)
         profileButton.hidden = needsUsername
-        accountMenu.hidden = true
-        profileButton.setAttribute("aria-expanded", "false")
-        logoutButton.hidden = false
         userSearchForm.hidden = needsUsername
-        weatherInline.hidden = needsUsername
         authCard.hidden = true
         authVisual.hidden = true
         usernameSetup.hidden = !needsUsername
@@ -155,16 +150,13 @@ const updateSessionUI = () => {
         postPanel.hidden = needsUsername
         notesPanel.hidden = true
         profileView.hidden = true
+        settingsView.hidden = true
         return
     }
 
     sessionStatus.innerText = "Log in to post and search users."
     profileButton.hidden = true
-    accountMenu.hidden = true
-    profileButton.setAttribute("aria-expanded", "false")
-    logoutButton.hidden = true
     userSearchForm.hidden = true
-    weatherInline.hidden = true
     authCard.hidden = false
     authVisual.hidden = false
     usernameSetup.hidden = true
@@ -172,6 +164,7 @@ const updateSessionUI = () => {
     postPanel.hidden = true
     notesPanel.hidden = true
     profileView.hidden = true
+    settingsView.hidden = true
     closeSearchResults()
 }
 
@@ -222,6 +215,45 @@ const getSignupUsername = () => {
     }
 
     return username
+}
+
+const renderAvatar = (element, label = "P", imageURL = "") => {
+    element.innerHTML = ""
+    element.style.backgroundImage = ""
+
+    if (imageURL) {
+        const image = document.createElement("img")
+        image.src = imageURL
+        image.alt = ""
+        image.loading = "lazy"
+        element.appendChild(image)
+        return
+    }
+
+    element.innerText = getInitials(label)
+}
+
+const populateSettingsForm = () => {
+    if (!currentUser) return
+
+    accountSettingsForm.elements.username.value = currentUser.username || ""
+    accountSettingsForm.elements.email.value = currentUser.email || ""
+    accountSettingsForm.elements.profilePicture.value = currentUser.profilePicture || ""
+    renderAvatar(settingsAvatarPreview, currentUser.username || currentUser.email || "P", currentUser.profilePicture)
+}
+
+const showSettingsView = () => {
+    if (!currentUser || currentUser.needsUsername) return
+
+    closeSearchResults()
+    activeProfileUsername = ""
+    populateSettingsForm()
+    homeScreen.hidden = true
+    postPanel.hidden = true
+    notesPanel.hidden = true
+    profileView.hidden = true
+    settingsView.hidden = false
+    window.scrollTo({ top: 0, behavior: "smooth" })
 }
 
 const startProviderAuth = (provider) => {
@@ -280,7 +312,7 @@ const createPostElement = (post, afterDelete) => {
     const avatar = document.createElement("button")
     avatar.className = "post-avatar"
     avatar.type = "button"
-    avatar.innerText = getInitials(post.author)
+    renderAvatar(avatar, post.author, post.authorProfilePicture)
     avatar.setAttribute("aria-label", "Open " + post.author + " profile")
     avatar.addEventListener("click", () => loadUserProfile(post.author))
 
@@ -438,56 +470,6 @@ const addNotesToPage = (notes) => {
     })
 }
 
-const weatherDescriptions = {
-    0: "Clear sky",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Foggy",
-    48: "Rime fog",
-    51: "Light drizzle",
-    53: "Drizzle",
-    55: "Heavy drizzle",
-    61: "Light rain",
-    63: "Rain",
-    65: "Heavy rain",
-    71: "Light snow",
-    73: "Snow",
-    75: "Heavy snow",
-    80: "Light showers",
-    81: "Showers",
-    82: "Heavy showers",
-    95: "Thunderstorm"
-}
-
-const renderWeather = (data, label) => {
-    const current = data.current
-    const summary = weatherDescriptions[current.weather_code] || "Current conditions"
-    weatherInline.innerText = label + " " + Math.round(current.temperature_2m) + "°F · " + summary
-}
-
-const loadWeather = async (coords = { latitude: 49.2827, longitude: -123.1207 }, label = "Vancouver") => {
-    weatherInline.innerText = "Loading weather..."
-    const params = new URLSearchParams({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        current: "temperature_2m,apparent_temperature,weather_code,wind_speed_10m",
-        daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
-        temperature_unit: "fahrenheit",
-        wind_speed_unit: "mph",
-        timezone: "auto"
-    })
-
-    const response = await fetch("https://api.open-meteo.com/v1/forecast?" + params)
-    const data = await response.json()
-
-    if (!response.ok) {
-        throw new Error(data.reason || "Weather request failed.")
-    }
-
-    renderWeather(data, label)
-}
-
 const renderSearchResults = (users) => {
     userSearchResults.innerHTML = ""
 
@@ -504,7 +486,12 @@ const renderSearchResults = (users) => {
         const button = document.createElement("button")
         button.type = "button"
         button.className = "search-result"
-        button.innerHTML = "<span>" + getInitials(user.username) + "</span><strong>@" + user.username + "</strong>"
+        const avatar = document.createElement("span")
+        renderAvatar(avatar, user.username, user.profilePicture)
+        const label = document.createElement("strong")
+        label.innerText = "@" + user.username
+        button.appendChild(avatar)
+        button.appendChild(label)
         button.addEventListener("click", () => loadUserProfile(user.username))
         userSearchResults.appendChild(button)
     })
@@ -538,11 +525,12 @@ const loadUserProfile = async (username) => {
     const profileUsername = data.user.username
     profileTitle.innerText = "@" + profileUsername
     profileMeta.innerText = (data.posts.length === 1 ? "1 public post" : data.posts.length + " public posts")
-    profileAvatar.innerText = getInitials(profileUsername)
+    renderAvatar(profileAvatar, profileUsername, data.user.profilePicture)
     addProfilePostsToPage(data.posts)
 
     homeScreen.hidden = true
     postPanel.hidden = true
+    settingsView.hidden = true
     profileView.hidden = false
     window.scrollTo({ top: 0, behavior: "smooth" })
 }
@@ -678,7 +666,7 @@ resendVerification.addEventListener("click", async () => {
     }
 })
 
-logoutButton.addEventListener("click", async () => {
+const signOut = async () => {
     await request("/api/logout", { method: "POST" })
     authToken = ""
     localStorage.removeItem(authTokenKey)
@@ -687,24 +675,28 @@ logoutButton.addEventListener("click", async () => {
     updateSessionUI()
     getPosts()
     getNotes()
-})
+}
 
-profileButton.addEventListener("click", (event) => {
-    event.stopPropagation()
-    accountMenu.hidden = !accountMenu.hidden
-    profileButton.setAttribute("aria-expanded", String(!accountMenu.hidden))
-})
+settingsLogoutButton.addEventListener("click", signOut)
 
-viewProfileButton.addEventListener("click", () => {
-    closeAccountMenu()
-    if (currentUser?.username) {
-        loadUserProfile(currentUser.username)
-    }
+profileButton.addEventListener("click", () => {
+    showSettingsView()
 })
 
 backToFeed.addEventListener("click", () => {
     showHomeFeed()
     getPosts()
+})
+
+backFromSettings.addEventListener("click", () => {
+    showHomeFeed()
+    getPosts()
+})
+
+settingsViewProfile.addEventListener("click", () => {
+    if (currentUser?.username) {
+        loadUserProfile(currentUser.username)
+    }
 })
 
 userSearch.addEventListener("input", () => {
@@ -735,10 +727,6 @@ document.addEventListener("click", (event) => {
     if (!userSearchForm.contains(event.target)) {
         closeSearchResults()
     }
-
-    if (!accountMenu.hidden && !accountMenu.contains(event.target) && !profileButton.contains(event.target)) {
-        closeAccountMenu()
-    }
 })
 
 setAuthMode("login")
@@ -752,6 +740,7 @@ if (oauthToken) {
     localStorage.removeItem(oldAuthTokenKey)
     authMessage.innerText = "Finishing sign-in..."
     queryParams.delete("token")
+    queryParams.delete("login")
     const cleanQuery = queryParams.toString()
     const cleanURL = window.location.pathname + (cleanQuery ? "?" + cleanQuery : "") + window.location.hash
     window.history.replaceState({}, document.title, cleanURL)
@@ -759,14 +748,6 @@ if (oauthToken) {
 
 if (queryParams.get("verified") === "1") {
     authMessage.innerText = "Email verified. You can log in now."
-}
-
-if (queryParams.get("login") === "google") {
-    authMessage.innerText = "Signed in with Google."
-}
-
-if (queryParams.get("login") === "microsoft") {
-    authMessage.innerText = "Signed in with Microsoft."
 }
 
 if (queryParams.get("login") === "failed") {
@@ -797,12 +778,63 @@ if (queryParams.get("login") === "username_required") {
     authMessage.innerText = "That provider account needs a username before it can log in. Create the account first."
 }
 
+accountSettingsForm.addEventListener("submit", async (event) => {
+    event.preventDefault()
+    settingsMessage.innerText = ""
+
+    try {
+        const data = await request("/api/me/settings", {
+            method: "PATCH",
+            body: JSON.stringify({
+                username: accountSettingsForm.elements.username.value,
+                email: accountSettingsForm.elements.email.value,
+                profilePicture: accountSettingsForm.elements.profilePicture.value
+            })
+        })
+
+        currentUser = data.user
+        settingsMessage.innerText = data.message
+        updateSessionUI()
+        showSettingsView()
+        getPosts()
+    } catch (error) {
+        settingsMessage.innerText = error.message
+    }
+})
+
+passwordSettingsForm.addEventListener("submit", async (event) => {
+    event.preventDefault()
+    passwordMessage.innerText = ""
+
+    try {
+        const data = await request("/api/me/password", {
+            method: "PATCH",
+            body: JSON.stringify({
+                currentPassword: passwordSettingsForm.elements.currentPassword.value,
+                newPassword: passwordSettingsForm.elements.newPassword.value
+            })
+        })
+
+        passwordSettingsForm.reset()
+        passwordMessage.innerText = data.message
+    } catch (error) {
+        passwordMessage.innerText = error.message
+    }
+})
+
+accountSettingsForm.elements.profilePicture.addEventListener("input", () => {
+    renderAvatar(settingsAvatarPreview, accountSettingsForm.elements.username.value || "P", accountSettingsForm.elements.profilePicture.value)
+})
+
 getSession()
-    .then(() => Promise.all([getPosts(), getNotes(), loadWeather()]))
+    .then(() => {
+        if (!currentUser && oauthToken) {
+            authMessage.innerText = "Sign-in did not complete. Please try again."
+        }
+
+        return Promise.all([getPosts(), getNotes()])
+    })
     .catch(error => {
         sessionStatus.innerText = "Could not reach the server."
         authMessage.innerText = error.message
-        loadWeather().catch(() => {
-            weatherInline.innerText = "Weather unavailable"
-        })
     })
