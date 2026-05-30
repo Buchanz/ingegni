@@ -1543,6 +1543,8 @@ body.is-auth-page {
   width: clamp(18px, 2.8vh, 22px);
   height: clamp(18px, 2.8vh, 22px);
   flex-basis: clamp(18px, 2.8vh, 22px);
+  border-radius: 50%;
+  filter: drop-shadow(0 5px 8px rgba(48, 70, 90, 0.24));
   transform: translateY(-50%);
   pointer-events: none;
 }
