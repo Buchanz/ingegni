@@ -62,6 +62,20 @@ let authToken = storedToken
 let searchTimer = null
 let activeProfileUsername = ""
 
+const morphText = (element, text) => {
+    if (!element || element.innerText === text) return
+
+    element.classList.remove("text-morph")
+    void element.offsetWidth
+    element.classList.add("text-morph")
+    window.setTimeout(() => {
+        element.innerText = text
+    }, 110)
+    window.setTimeout(() => {
+        element.classList.remove("text-morph")
+    }, 280)
+}
+
 if (storedToken && !localStorage.getItem(authTokenKey)) {
     localStorage.setItem(authTokenKey, storedToken)
 }
@@ -99,9 +113,12 @@ const setAuthMode = (mode) => {
     authMode = mode
     const isLogin = mode === "login"
 
+    authCard.classList.remove("auth-mode-login", "auth-mode-signup", "auth-mode-changing")
+    authCard.classList.add(isLogin ? "auth-mode-login" : "auth-mode-signup", "auth-mode-changing")
+    window.setTimeout(() => authCard.classList.remove("auth-mode-changing"), 320)
     showLogin.classList.toggle("active", isLogin)
     showSignup.classList.toggle("active", !isLogin)
-    authSubmit.innerText = isLogin ? "Continue" : "Create account"
+    morphText(authSubmit, isLogin ? "Continue" : "Create account")
     authEmail.hidden = isLogin
     authEmailLabel.hidden = isLogin
     authEmail.style.display = isLogin ? "none" : ""
@@ -110,7 +127,7 @@ const setAuthMode = (mode) => {
     resendVerification.hidden = false
     googleLogin.hidden = false
     microsoftLogin.hidden = false
-    authUsernameLabel.innerText = isLogin ? "Username or email" : "Username"
+    morphText(authUsernameLabel, isLogin ? "Username or email" : "Username")
     authForm.elements.username.placeholder = isLogin ? "Email or username" : "Username"
     authForm.elements.email.placeholder = "Email"
     authForm.elements.password.placeholder = "Password"

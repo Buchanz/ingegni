@@ -1698,6 +1698,7 @@ body.is-auth-page::after {
 
 .is-auth-page .auth-card {
   margin-left: 0;
+  min-height: clamp(484px, 72vh, 560px);
   overflow: visible;
 }
 
@@ -1708,6 +1709,7 @@ body.is-auth-page::after {
 
 .is-auth-page #auth-form {
   gap: 10px !important;
+  min-height: 242px;
 }
 
 .is-auth-page #auth-form > * {
@@ -1721,6 +1723,67 @@ body.is-auth-page::after {
 
 .is-auth-page #auth-password {
   margin-top: 0;
+}
+
+.is-auth-page .auth-mode-login #resend-verification {
+  margin-top: clamp(48px, 5.4vh, 60px) !important;
+}
+
+.is-auth-page .auth-mode-signup #resend-verification {
+  margin-top: 0 !important;
+}
+
+.is-auth-page .auth-mode-changing #auth-form input,
+.is-auth-page .auth-mode-changing #auth-submit,
+.is-auth-page .auth-mode-changing .tab-button {
+  animation: auth-control-morph 320ms ease both;
+}
+
+.text-morph {
+  animation: auth-text-morph 280ms ease both;
+}
+
+@keyframes auth-control-morph {
+  0% {
+    opacity: 0.72;
+    filter: blur(4px);
+    transform: translateY(2px) scale(0.99);
+  }
+  55% {
+    opacity: 0.9;
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes auth-text-morph {
+  0% {
+    opacity: 0.45;
+    filter: blur(5px);
+    transform: translateY(4px) scale(0.98);
+  }
+  58% {
+    opacity: 0.86;
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-auth-page .auth-mode-changing #auth-form input,
+  .is-auth-page .auth-mode-changing #auth-submit,
+  .is-auth-page .auth-mode-changing .tab-button,
+  .text-morph {
+    animation: none;
+  }
 }
 
 @media (max-width: 520px) {
