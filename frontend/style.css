@@ -1647,7 +1647,10 @@ body.is-auth-page::after {
 
 .is-auth-page #auth-email[hidden],
 .is-auth-page #auth-email-label[hidden] {
-  display: none !important;
+  display: block !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .is-auth-page .provider-button[hidden],
@@ -1725,46 +1728,18 @@ body.is-auth-page::after {
   margin-top: 0;
 }
 
-.is-auth-page .auth-mode-login #resend-verification {
-  margin-top: clamp(48px, 5.4vh, 60px) !important;
-}
-
-.is-auth-page .auth-mode-signup #resend-verification {
-  margin-top: 0 !important;
-}
-
-.is-auth-page .auth-mode-changing #auth-form input,
-.is-auth-page .auth-mode-changing #auth-submit,
-.is-auth-page .auth-mode-changing .tab-button {
-  animation: auth-control-morph 320ms ease both;
+.is-auth-page #auth-email {
+  transition: opacity 240ms ease, filter 240ms ease, background 240ms ease, border-color 240ms ease;
 }
 
 .text-morph {
-  animation: auth-text-morph 280ms ease both;
-}
-
-@keyframes auth-control-morph {
-  0% {
-    opacity: 0.72;
-    filter: blur(4px);
-    transform: translateY(2px) scale(0.99);
-  }
-  55% {
-    opacity: 0.9;
-    filter: blur(1px);
-  }
-  100% {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0) scale(1);
-  }
+  animation: auth-text-morph 260ms ease both;
 }
 
 @keyframes auth-text-morph {
   0% {
     opacity: 0.45;
     filter: blur(5px);
-    transform: translateY(4px) scale(0.98);
   }
   58% {
     opacity: 0.86;
@@ -1773,14 +1748,10 @@ body.is-auth-page::after {
   100% {
     opacity: 1;
     filter: blur(0);
-    transform: translateY(0) scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .is-auth-page .auth-mode-changing #auth-form input,
-  .is-auth-page .auth-mode-changing #auth-submit,
-  .is-auth-page .auth-mode-changing .tab-button,
   .text-morph {
     animation: none;
   }

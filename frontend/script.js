@@ -113,16 +113,15 @@ const setAuthMode = (mode) => {
     authMode = mode
     const isLogin = mode === "login"
 
-    authCard.classList.remove("auth-mode-login", "auth-mode-signup", "auth-mode-changing")
-    authCard.classList.add(isLogin ? "auth-mode-login" : "auth-mode-signup", "auth-mode-changing")
-    window.setTimeout(() => authCard.classList.remove("auth-mode-changing"), 320)
+    authCard.classList.remove("auth-mode-login", "auth-mode-signup")
+    authCard.classList.add(isLogin ? "auth-mode-login" : "auth-mode-signup")
     showLogin.classList.toggle("active", isLogin)
     showSignup.classList.toggle("active", !isLogin)
     morphText(authSubmit, isLogin ? "Continue" : "Create account")
     authEmail.hidden = isLogin
     authEmailLabel.hidden = isLogin
-    authEmail.style.display = isLogin ? "none" : ""
-    authEmailLabel.style.display = isLogin ? "none" : ""
+    authEmail.style.display = ""
+    authEmailLabel.style.display = ""
     authEmail.required = !isLogin
     resendVerification.hidden = false
     googleLogin.hidden = false
