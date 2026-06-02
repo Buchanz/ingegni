@@ -169,11 +169,33 @@ const closeSearchResults = () => {
     userSearchResults.hidden = true
 }
 
+let settingsCloseTimer = null
+
+const closeSettingsView = (animate = true) => {
+    clearTimeout(settingsCloseTimer)
+
+    if (settingsView.hidden) return
+
+    settingsView.classList.remove("is-opening")
+
+    if (!animate) {
+        settingsView.classList.remove("is-closing")
+        settingsView.hidden = true
+        return
+    }
+
+    settingsView.classList.add("is-closing")
+    settingsCloseTimer = window.setTimeout(() => {
+        settingsView.hidden = true
+        settingsView.classList.remove("is-closing")
+    }, 220)
+}
+
 const showHomeFeed = () => {
     const needsUsername = Boolean(currentUser?.needsUsername)
     activeProfileUsername = ""
     profileView.hidden = true
-    settingsView.hidden = true
+    closeSettingsView(false)
     homeScreen.hidden = needsUsername || !currentUser
     postPanel.hidden = needsUsername || !currentUser
     closeSearchResults()
@@ -198,7 +220,7 @@ const updateSessionUI = () => {
         postPanel.hidden = needsUsername
         notesPanel.hidden = true
         profileView.hidden = true
-        settingsView.hidden = true
+        closeSettingsView(false)
         return
     }
 
@@ -212,7 +234,7 @@ const updateSessionUI = () => {
     postPanel.hidden = true
     notesPanel.hidden = true
     profileView.hidden = true
-    settingsView.hidden = true
+    closeSettingsView(false)
     closeSearchResults()
 }
 
@@ -299,7 +321,9 @@ const showSettingsView = () => {
 
     closeSearchResults()
     populateSettingsForm()
+    settingsView.classList.remove("is-closing", "is-opening")
     settingsView.hidden = false
+    requestAnimationFrame(() => settingsView.classList.add("is-opening"))
 }
 
 const readProfilePictureFile = (file) => new Promise((resolve, reject) => {
@@ -599,7 +623,7 @@ const loadUserProfile = async (username) => {
 
     homeScreen.hidden = true
     postPanel.hidden = true
-    settingsView.hidden = true
+    closeSettingsView(false)
     profileView.hidden = false
     window.scrollTo({ top: 0, behavior: "smooth" })
 }
@@ -768,12 +792,12 @@ backToFeed.addEventListener("click", () => {
 })
 
 backFromSettings.addEventListener("click", () => {
-    settingsView.hidden = true
+    closeSettingsView()
 })
 
 settingsView.addEventListener("click", (event) => {
     if (event.target === settingsView) {
-        settingsView.hidden = true
+        closeSettingsView()
     }
 })
 

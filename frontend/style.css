@@ -2136,3 +2136,166 @@ body.is-authenticated::after {
     justify-self: stretch;
   }
 }
+
+
+/* Homepage floating card and morphing settings refresh */
+.is-authenticated .app-shell {
+  width: 100%;
+  max-width: none;
+  padding: 0 0 48px;
+}
+
+.is-authenticated .app-header {
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-height: 78px;
+  padding: 12px clamp(16px, 4vw, 48px);
+  grid-template-columns: minmax(210px, 1fr) minmax(260px, 520px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: 0 16px 48px rgba(45, 62, 78, 0.12);
+}
+
+.is-authenticated .workspace {
+  width: min(1120px, calc(100% - 32px));
+  margin: 24px auto 0;
+  grid-template-columns: minmax(0, 760px);
+}
+
+.is-authenticated .feed-home,
+.is-authenticated .profile-view {
+  gap: 18px;
+  overflow: visible;
+  min-height: auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.is-authenticated .composer-panel,
+.is-authenticated .feed-panel,
+.is-authenticated .notes-panel,
+.is-authenticated .profile-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 24px 68px rgba(45, 62, 78, 0.14);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+.is-authenticated .composer-panel,
+.is-authenticated .feed-panel,
+.is-authenticated .notes-panel {
+  padding: 18px;
+}
+
+.is-authenticated .feed-title-row {
+  padding: 0 0 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(15, 20, 25, 0.08);
+}
+
+.is-authenticated .post-list,
+.is-authenticated .note-list {
+  gap: 14px;
+}
+
+.is-authenticated .post,
+.is-authenticated .note-item,
+.is-authenticated .empty-state {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 18px 44px rgba(45, 62, 78, 0.12);
+}
+
+.is-authenticated .post {
+  padding: 16px;
+}
+
+.is-authenticated .post:hover,
+.is-authenticated .note-item:hover {
+  background: rgba(255, 255, 255, 0.72);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 24px 54px rgba(45, 62, 78, 0.16);
+}
+
+.is-authenticated .post-author {
+  color: #0f1419;
+}
+
+.is-authenticated .composer-footer {
+  border-top-color: rgba(15, 20, 25, 0.08);
+}
+
+.settings-view {
+  align-items: start;
+  justify-items: start;
+  padding: 92px clamp(16px, 4vw, 48px) 24px;
+  background: rgba(18, 20, 24, 0.16);
+}
+
+.settings-card {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 116px));
+  transform-origin: 36px 0;
+}
+
+.settings-view.is-opening {
+  animation: settingsVeilIn 220ms ease both;
+}
+
+.settings-view.is-opening .settings-card {
+  animation: settingsPuffIn 260ms cubic-bezier(0.2, 0.9, 0.2, 1.12) both;
+}
+
+.settings-view.is-closing {
+  pointer-events: none;
+  animation: settingsVeilOut 200ms ease both;
+}
+
+.settings-view.is-closing .settings-card {
+  animation: settingsPuffOut 200ms ease both;
+}
+
+@keyframes settingsVeilIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes settingsVeilOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes settingsPuffIn {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.86); filter: blur(8px); }
+  72% { opacity: 1; transform: translateY(2px) scale(1.025); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes settingsPuffOut {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.9); filter: blur(8px); }
+}
+
+@media (max-width: 760px) {
+  .is-authenticated .app-header {
+    grid-template-columns: 1fr auto;
+    padding: 10px 14px 14px;
+  }
+
+  .is-authenticated .workspace {
+    width: min(100% - 20px, 760px);
+    margin-top: 16px;
+  }
+
+  .settings-view {
+    padding: 86px 10px 14px;
+    justify-items: center;
+  }
+}
