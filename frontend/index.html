@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxima</title>
-    <script defer src="script.js?v=20260602-settings-upload"></script>
-    <link rel="stylesheet" href="style.css?v=20260602-settings-upload">
+    <script defer src="script.js?v=20260602-delete-account"></script>
+    <link rel="stylesheet" href="style.css?v=20260602-delete-account">
 </head>
 <body class="is-auth-page">
     <div class="app-shell">
@@ -150,13 +150,18 @@
                 <div class="settings-card">
                     <button id="back-from-settings" class="settings-close-button" type="button" aria-label="Close profile settings">Close</button>
                     <div class="settings-heading">
-                        <div id="settings-avatar-preview" class="profile-avatar settings-avatar">P</div>
+                        <label class="settings-avatar-button" for="settings-profile-picture-file" aria-label="Upload profile picture">
+                            <span id="settings-avatar-preview" class="profile-avatar settings-avatar">P</span>
+                            <span>Change photo</span>
+                        </label>
                         <div>
                             <p class="eyebrow">Account</p>
                             <h1 id="settings-title">Profile settings</h1>
                             <p class="support-copy">Manage how your account appears across Proxima.</p>
                         </div>
                     </div>
+
+                    <input type="file" id="settings-profile-picture-file" accept="image/png,image/jpeg,image/webp,image/gif">
 
                     <form id="account-settings-form" class="settings-form">
                         <label for="settings-username">Username</label>
@@ -165,12 +170,6 @@
                         <label for="settings-email">Email</label>
                         <input type="email" name="email" id="settings-email" autocomplete="email" required>
 
-                        <label for="settings-profile-picture-file">Profile picture</label>
-                        <div class="file-upload-row">
-                            <label class="file-upload-button" for="settings-profile-picture-file">Upload image</label>
-                            <span id="settings-profile-picture-name">No image selected</span>
-                        </div>
-                        <input type="file" id="settings-profile-picture-file" accept="image/png,image/jpeg,image/webp,image/gif">
                         <input type="hidden" name="profilePicture" id="settings-profile-picture">
 
                         <button class="primary-button" type="submit">Save profile</button>
@@ -192,6 +191,18 @@
                     <div class="settings-actions">
                         <button id="settings-logout-button" class="delete-button" type="button">Sign out</button>
                     </div>
+
+                    <form id="delete-account-form" class="delete-account-form" hidden>
+                        <p>Type your username to permanently delete your account.</p>
+                        <input type="text" name="confirmUsername" id="delete-confirm-username" autocomplete="off" placeholder="Username">
+                        <div class="delete-account-actions">
+                            <button id="cancel-delete-account" class="ghost-button" type="button">Cancel</button>
+                            <button class="danger-button" type="submit">Delete account forever</button>
+                        </div>
+                        <p id="delete-account-message" class="form-message" aria-live="polite"></p>
+                    </form>
+
+                    <button id="show-delete-account" class="danger-link-button" type="button">Delete account</button>
                 </div>
             </section>
 

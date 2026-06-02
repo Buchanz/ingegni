@@ -209,8 +209,8 @@ function validateProfilePicture(value) {
         return ""
     }
 
-    if (value.length > 1250000) {
-        return "Profile picture file is too large. Use an image under 750 KB."
+    if (value.length > 3500000) {
+        return "Profile picture file is too large. Try a smaller image."
     }
 
     if (value.startsWith("data:")) {
@@ -637,7 +637,7 @@ passport.deserializeUser(async (id, done) => {
     }
 })
 
-app.use(express.json({ limit: "2mb" }))
+app.use(express.json({ limit: "5mb" }))
 app.use(express.static(path.join(__dirname, "../frontend")))
 app.use((req, res, next) => {
     const allowedOrigins = [
@@ -917,6 +917,35 @@ app.patch("/api/me/password", requireAuth, async (req, res, next) => {
         )
 
         res.json({ message: "Password updated." })
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.delete("/api/me", requireAuth, async (req, res, next) => {
+    try {
+        const user = await db.collection("users").findOne({ _id: new ObjectId(req.user._id) })
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found." })
+        }
+
+        const confirmation = normalizeUsername(req.body.confirmUsername)
+        const username = normalizeUsername(user.username)
+
+        if (!confirmation || confirmation !== username) {
+            return res.status(400).json({ message: "Type your username exactly to delete your account." })
+        }
+
+        await db.collection("posts").deleteMany({ authorId: user._id })
+        await db.collection("notes").deleteMany({ userId: user._id })
+        await db.collection("users").deleteOne({ _id: user._id })
+
+        req.logout(() => {
+            req.session?.destroy(() => {
+                res.json({ message: "Account deleted." })
+            })
+        })
     } catch (error) {
         next(error)
     }

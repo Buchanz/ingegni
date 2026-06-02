@@ -30,7 +30,10 @@ const passwordMessage = document.getElementById("password-message")
 const backFromSettings = document.getElementById("back-from-settings")
 const settingsLogoutButton = document.getElementById("settings-logout-button")
 const profilePictureFile = document.getElementById("settings-profile-picture-file")
-const profilePictureName = document.getElementById("settings-profile-picture-name")
+const showDeleteAccount = document.getElementById("show-delete-account")
+const deleteAccountForm = document.getElementById("delete-account-form")
+const cancelDeleteAccount = document.getElementById("cancel-delete-account")
+const deleteAccountMessage = document.getElementById("delete-account-message")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
 const authUsernameLabel = document.getElementById("auth-username-label")
@@ -285,7 +288,9 @@ const populateSettingsForm = () => {
     accountSettingsForm.elements.email.value = currentUser.email || ""
     accountSettingsForm.elements.profilePicture.value = currentUser.profilePicture || ""
     profilePictureFile.value = ""
-    profilePictureName.innerText = currentUser.profilePicture ? "Current image saved" : "No image selected"
+    deleteAccountForm.hidden = true
+    deleteAccountForm.reset()
+    deleteAccountMessage.innerText = ""
     renderAvatar(settingsAvatarPreview, currentUser.username || currentUser.email || "P", currentUser.profilePicture)
 }
 
@@ -309,8 +314,8 @@ const readProfilePictureFile = (file) => new Promise((resolve, reject) => {
         return
     }
 
-    if (file.size > 750000) {
-        reject(new Error("Choose an image under 750 KB."))
+    if (file.size > 2000000) {
+        reject(new Error("That image is too large. Try a smaller photo."))
         return
     }
 
@@ -741,6 +746,16 @@ const signOut = async () => {
     getNotes()
 }
 
+const clearLocalSession = () => {
+    authToken = ""
+    localStorage.removeItem(authTokenKey)
+    localStorage.removeItem(oldAuthTokenKey)
+    currentUser = null
+    updateSessionUI()
+    getPosts()
+    getNotes()
+}
+
 settingsLogoutButton.addEventListener("click", signOut)
 
 profileButton.addEventListener("click", () => {
@@ -879,19 +894,45 @@ profilePictureFile.addEventListener("change", async () => {
     const file = profilePictureFile.files[0]
 
     if (!file) {
-        profilePictureName.innerText = currentUser?.profilePicture ? "Current image saved" : "No image selected"
         return
     }
 
     try {
         const imageData = await readProfilePictureFile(file)
         accountSettingsForm.elements.profilePicture.value = imageData
-        profilePictureName.innerText = file.name
         renderAvatar(settingsAvatarPreview, accountSettingsForm.elements.username.value || currentUser?.username || "P", imageData)
     } catch (error) {
         profilePictureFile.value = ""
-        profilePictureName.innerText = currentUser?.profilePicture ? "Current image saved" : "No image selected"
         settingsMessage.innerText = error.message
+    }
+})
+
+showDeleteAccount.addEventListener("click", () => {
+    deleteAccountForm.hidden = false
+    deleteAccountMessage.innerText = ""
+    deleteAccountForm.elements.confirmUsername.focus()
+})
+
+cancelDeleteAccount.addEventListener("click", () => {
+    deleteAccountForm.hidden = true
+    deleteAccountForm.reset()
+    deleteAccountMessage.innerText = ""
+})
+
+deleteAccountForm.addEventListener("submit", async (event) => {
+    event.preventDefault()
+    deleteAccountMessage.innerText = "Deleting account..."
+
+    try {
+        await request("/api/me", {
+            method: "DELETE",
+            body: JSON.stringify({ confirmUsername: deleteAccountForm.elements.confirmUsername.value })
+        })
+
+        clearLocalSession()
+        authMessage.innerText = "Account deleted."
+    } catch (error) {
+        deleteAccountMessage.innerText = error.message
     }
 })
 
