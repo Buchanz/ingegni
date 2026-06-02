@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxima</title>
-    <script defer src="script.js?v=20260530-auth-puff"></script>
-    <link rel="stylesheet" href="style.css?v=20260530-auth-puff">
+    <script defer src="script.js?v=20260602-settings-upload"></script>
+    <link rel="stylesheet" href="style.css?v=20260602-settings-upload">
 </head>
 <body class="is-auth-page">
     <div class="app-shell">
@@ -146,9 +146,9 @@
 
 
 
-            <section id="settings-view" class="settings-view" aria-labelledby="settings-title" hidden>
-                <button id="back-from-settings" class="text-button back-button" type="button">Back to feed</button>
+            <section id="settings-view" class="settings-view" aria-labelledby="settings-title" aria-modal="true" role="dialog" hidden>
                 <div class="settings-card">
+                    <button id="back-from-settings" class="settings-close-button" type="button" aria-label="Close profile settings">Close</button>
                     <div class="settings-heading">
                         <div id="settings-avatar-preview" class="profile-avatar settings-avatar">P</div>
                         <div>
@@ -165,8 +165,13 @@
                         <label for="settings-email">Email</label>
                         <input type="email" name="email" id="settings-email" autocomplete="email" required>
 
-                        <label for="settings-profile-picture">Profile picture URL</label>
-                        <input type="url" name="profilePicture" id="settings-profile-picture" placeholder="https://example.com/photo.jpg">
+                        <label for="settings-profile-picture-file">Profile picture</label>
+                        <div class="file-upload-row">
+                            <label class="file-upload-button" for="settings-profile-picture-file">Upload image</label>
+                            <span id="settings-profile-picture-name">No image selected</span>
+                        </div>
+                        <input type="file" id="settings-profile-picture-file" accept="image/png,image/jpeg,image/webp,image/gif">
+                        <input type="hidden" name="profilePicture" id="settings-profile-picture">
 
                         <button class="primary-button" type="submit">Save profile</button>
                         <p id="settings-message" class="form-message" aria-live="polite"></p>
@@ -185,7 +190,6 @@
                     </form>
 
                     <div class="settings-actions">
-                        <button id="settings-view-profile" class="text-button" type="button">View public profile</button>
                         <button id="settings-logout-button" class="delete-button" type="button">Sign out</button>
                     </div>
                 </div>

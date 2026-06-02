@@ -209,8 +209,16 @@ function validateProfilePicture(value) {
         return ""
     }
 
-    if (value.length > 500) {
-        return "Profile picture URL must be 500 characters or less."
+    if (value.length > 1250000) {
+        return "Profile picture file is too large. Use an image under 750 KB."
+    }
+
+    if (value.startsWith("data:")) {
+        if (!/^data:image\/(png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=]+$/i.test(value)) {
+            return "Profile picture must be a PNG, JPG, WEBP, or GIF image."
+        }
+
+        return ""
     }
 
     try {
@@ -629,7 +637,7 @@ passport.deserializeUser(async (id, done) => {
     }
 })
 
-app.use(express.json())
+app.use(express.json({ limit: "2mb" }))
 app.use(express.static(path.join(__dirname, "../frontend")))
 app.use((req, res, next) => {
     const allowedOrigins = [

@@ -1899,13 +1899,49 @@ body.is-authenticated::after {
 }
 
 .settings-view {
-  padding-bottom: 28px;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(9, 18, 28, 0.34);
+  backdrop-filter: blur(10px) saturate(130%);
 }
 
 .settings-card {
+  position: relative;
   display: grid;
   gap: 22px;
-  padding: 18px;
+  width: min(640px, 100%);
+  max-height: min(780px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 34px 90px rgba(20, 34, 48, 0.28);
+  backdrop-filter: blur(28px) saturate(150%);
+}
+
+.settings-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+  color: #0f1419;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 12px 28px rgba(45, 62, 78, 0.16);
+  backdrop-filter: blur(16px) saturate(145%);
+}
+
+.settings-close-button:hover {
+  background: rgba(255, 255, 255, 0.82);
+  transform: translateY(-1px);
 }
 
 .settings-heading {
@@ -1927,7 +1963,7 @@ body.is-authenticated::after {
   border: 1px solid rgba(255, 255, 255, 0.62);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.46);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66), 0 18px 42px rgba(45, 62, 78, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66), 0 22px 54px rgba(45, 62, 78, 0.16);
   backdrop-filter: blur(16px) saturate(145%);
 }
 
@@ -1940,7 +1976,61 @@ body.is-authenticated::after {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.68);
   background: rgba(255, 255, 255, 0.58);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64), 0 12px 28px rgba(45, 62, 78, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 18px 42px rgba(45, 62, 78, 0.22);
+}
+
+.settings-form input:focus {
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 20px 48px rgba(29, 155, 240, 0.26);
+}
+
+#settings-profile-picture-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-upload-row {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.file-upload-button,
+.settings-actions .delete-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid rgba(29, 155, 240, 0.82);
+  border-radius: 999px;
+  background: rgba(29, 155, 240, 0.92);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), 0 18px 42px rgba(29, 155, 240, 0.3);
+  backdrop-filter: blur(18px) saturate(150%);
+  cursor: pointer;
+}
+
+.file-upload-button:hover,
+.settings-actions .delete-button:hover {
+  background: rgba(13, 124, 202, 0.98);
+  border-color: rgba(13, 124, 202, 0.98);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 22px 48px rgba(29, 155, 240, 0.38);
+}
+
+#settings-profile-picture-name {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-actions {
@@ -1949,10 +2039,15 @@ body.is-authenticated::after {
   gap: 10px;
 }
 
-.settings-actions .text-button,
 .settings-actions .delete-button {
   min-height: 42px;
   padding: 0 16px;
+}
+
+.is-authenticated .settings-view {
+  border: 0;
+  background: rgba(9, 18, 28, 0.34);
+  box-shadow: none;
 }
 
 @media (max-width: 760px) {

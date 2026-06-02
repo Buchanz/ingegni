@@ -28,8 +28,9 @@ const settingsAvatarPreview = document.getElementById("settings-avatar-preview")
 const settingsMessage = document.getElementById("settings-message")
 const passwordMessage = document.getElementById("password-message")
 const backFromSettings = document.getElementById("back-from-settings")
-const settingsViewProfile = document.getElementById("settings-view-profile")
 const settingsLogoutButton = document.getElementById("settings-logout-button")
+const profilePictureFile = document.getElementById("settings-profile-picture-file")
+const profilePictureName = document.getElementById("settings-profile-picture-name")
 const showLogin = document.getElementById("show-login")
 const showSignup = document.getElementById("show-signup")
 const authUsernameLabel = document.getElementById("auth-username-label")
@@ -283,6 +284,8 @@ const populateSettingsForm = () => {
     accountSettingsForm.elements.username.value = currentUser.username || ""
     accountSettingsForm.elements.email.value = currentUser.email || ""
     accountSettingsForm.elements.profilePicture.value = currentUser.profilePicture || ""
+    profilePictureFile.value = ""
+    profilePictureName.innerText = currentUser.profilePicture ? "Current image saved" : "No image selected"
     renderAvatar(settingsAvatarPreview, currentUser.username || currentUser.email || "P", currentUser.profilePicture)
 }
 
@@ -290,15 +293,32 @@ const showSettingsView = () => {
     if (!currentUser || currentUser.needsUsername) return
 
     closeSearchResults()
-    activeProfileUsername = ""
     populateSettingsForm()
-    homeScreen.hidden = true
-    postPanel.hidden = true
-    notesPanel.hidden = true
-    profileView.hidden = true
     settingsView.hidden = false
-    window.scrollTo({ top: 0, behavior: "smooth" })
 }
+
+const readProfilePictureFile = (file) => new Promise((resolve, reject) => {
+    if (!file) {
+        resolve("")
+        return
+    }
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+    if (!allowedTypes.includes(file.type)) {
+        reject(new Error("Choose a PNG, JPG, WEBP, or GIF image."))
+        return
+    }
+
+    if (file.size > 750000) {
+        reject(new Error("Choose an image under 750 KB."))
+        return
+    }
+
+    const reader = new FileReader()
+    reader.addEventListener("load", () => resolve(reader.result))
+    reader.addEventListener("error", () => reject(new Error("Could not read that image file.")))
+    reader.readAsDataURL(file)
+})
 
 const startProviderAuth = (provider) => {
     authMessage.innerText = ""
@@ -733,13 +753,12 @@ backToFeed.addEventListener("click", () => {
 })
 
 backFromSettings.addEventListener("click", () => {
-    showHomeFeed()
-    getPosts()
+    settingsView.hidden = true
 })
 
-settingsViewProfile.addEventListener("click", () => {
-    if (currentUser?.username) {
-        loadUserProfile(currentUser.username)
+settingsView.addEventListener("click", (event) => {
+    if (event.target === settingsView) {
+        settingsView.hidden = true
     }
 })
 
@@ -855,6 +874,27 @@ accountSettingsForm.addEventListener("submit", async (event) => {
     }
 })
 
+profilePictureFile.addEventListener("change", async () => {
+    settingsMessage.innerText = ""
+    const file = profilePictureFile.files[0]
+
+    if (!file) {
+        profilePictureName.innerText = currentUser?.profilePicture ? "Current image saved" : "No image selected"
+        return
+    }
+
+    try {
+        const imageData = await readProfilePictureFile(file)
+        accountSettingsForm.elements.profilePicture.value = imageData
+        profilePictureName.innerText = file.name
+        renderAvatar(settingsAvatarPreview, accountSettingsForm.elements.username.value || currentUser?.username || "P", imageData)
+    } catch (error) {
+        profilePictureFile.value = ""
+        profilePictureName.innerText = currentUser?.profilePicture ? "Current image saved" : "No image selected"
+        settingsMessage.innerText = error.message
+    }
+})
+
 passwordSettingsForm.addEventListener("submit", async (event) => {
     event.preventDefault()
     passwordMessage.innerText = ""
@@ -873,10 +913,6 @@ passwordSettingsForm.addEventListener("submit", async (event) => {
     } catch (error) {
         passwordMessage.innerText = error.message
     }
-})
-
-accountSettingsForm.elements.profilePicture.addEventListener("input", () => {
-    renderAvatar(settingsAvatarPreview, accountSettingsForm.elements.username.value || "P", accountSettingsForm.elements.profilePicture.value)
 })
 
 getSession()
